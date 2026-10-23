@@ -73,7 +73,8 @@ export function createFiscal({ rota, origem, navegar = (_p, alvo) => alvo }) {
     },
     posicao: () => ({ ...s.pos }),
     visivel: (minuto) => minuto >= 60 && s.suspenso <= 0,
-    voltarParaOrigem() { s.pos = { ...origem }; s.indice = 0; s.distracao = null; },
+    // Recomeça a ronda (por padrão na origem; o jogo pode mandar para longe do jogador).
+    voltarParaOrigem(ponto = origem) { s.pos = { ...ponto }; s.indice = 0; s.distracao = null; },
     suspender(seg) { s.suspenso = seg; },
     pausar(seg) { s.pausado = seg; },
     distrair(ponto) { s.distracao = { ...ponto }; s.esperaDistracao = ESPERA_DISTRACAO; },

@@ -146,6 +146,9 @@ export const PONTOS = {
   painel: { x: 100, z: -16.6 },
   cameraMonitor: { x: 94, y: 2.7, z: -1.5, olharX: 119, olharZ: -1.5 },
   portaAlmox: { x: -18.8, z: -1.5 },
+  // Onde o Fiscal recomeça depois de uma pergunta: sempre num andar diferente do seu.
+  recomecoTerreo: { x: 18, z: -1.5 },
+  recomeco1andar: { x: 118.5, z: -1.5 },
 };
 
 // Onde ficam as ferramentas no almoxarifado (pegar com E).

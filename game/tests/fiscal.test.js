@@ -123,3 +123,8 @@ test('alvo separado: anda até o alvo mas alcança pelo jogador', () => {
   assert.ok(Math.abs(f.posicao().z - 1) < 1e-6 && Math.abs(f.posicao().x) < 1e-6);
   assert.equal(f.update(0.1, { minuto: 130, jogador: { x: 0.5, z: 1 }, alvo: { x: 0, z: 1 }, olhando: false }), 'alcancou');
 });
+
+test('voltarParaOrigem aceita outro ponto de recomeço', () => {
+  const f = novo(); f.voltarParaOrigem({ x: 50, z: 2 });
+  assert.deepEqual(f.posicao(), { x: 50, z: 2 });
+});

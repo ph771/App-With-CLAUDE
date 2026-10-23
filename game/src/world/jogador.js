@@ -2,12 +2,14 @@
 import * as THREE from 'three';
 import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
 import { moverComColisao, temVisao } from './fisica.js';
+import { girarOlhar } from '../ui/toque-logica.js';
 
 const VELOCIDADE = 2.2;
 const ALTURA_OLHOS = 1.6;
 const TECLAS = { KeyW: 'frente', ArrowUp: 'frente', KeyS: 'tras', ArrowDown: 'tras', KeyA: 'esq', ArrowLeft: 'esq', KeyD: 'dir', ArrowRight: 'dir' };
 
-export function criarJogador(camera, dom, obterParedes, inicio) {
+// `entrada` (opcional): função que devolve { lado, frente } de -1 a 1 (analógico na tela).
+export function criarJogador(camera, dom, obterParedes, inicio, { entrada } = {}) {
   const controles = new PointerLockControls(camera, dom);
   const apertadas = new Set();
   let pos = { ...inicio };
@@ -40,13 +42,28 @@ export function criarJogador(camera, dom, obterParedes, inicio) {
       if (apertadas.has('tras')) { mx -= f.x; mz -= f.z; }
       if (apertadas.has('dir')) { mx += lado.x; mz += lado.z; }
       if (apertadas.has('esq')) { mx -= lado.x; mz -= lado.z; }
-      const n = Math.hypot(mx, mz);
+      let n = Math.hypot(mx, mz);
+      let forca = 1;
+      const analogico = entrada?.();
+      if (n === 0 && analogico && (analogico.lado || analogico.frente)) {
+        mx = f.x * analogico.frente + lado.x * analogico.lado;
+        mz = f.z * analogico.frente + lado.z * analogico.lado;
+        n = Math.hypot(mx, mz);
+        forca = Math.min(1, n);
+      }
       if (n > 0) {
-        const d = (VELOCIDADE * multVel * dt) / n;
+        const d = (VELOCIDADE * multVel * forca * dt) / n;
         pos = moverComColisao(pos, { x: mx * d, z: mz * d }, obterParedes(), 0.3);
         balanco += dt * 9 * multVel;
       }
       camera.position.set(pos.x, ALTURA_OLHOS + Math.sin(balanco) * 0.035, pos.z);
+    },
+    // Gira a câmera pelo arrasto do dedo (px).
+    girar(dx, dy, sensibilidade = 0.006) {
+      const e = new THREE.Euler().setFromQuaternion(camera.quaternion, 'YXZ');
+      const r = girarOlhar({ yaw: e.y, pitch: e.x }, dx, dy, sensibilidade);
+      e.set(r.pitch, r.yaw, 0, 'YXZ');
+      camera.quaternion.setFromEuler(e);
     },
     posicao: () => ({ ...pos }),
     teleportar(p) { pos = { ...p }; camera.position.set(pos.x, ALTURA_OLHOS, pos.z); },

@@ -16,24 +16,35 @@ import { PERGUNTAS, PERGUNTA_FINAL } from './data/perguntas.js';
 import { ITENS } from './data/visitantes.js';
 import { criarUI } from './ui/ui.js';
 import { criarAudio } from './audio.js';
+import { criarControlesToque } from './ui/toque.js';
 
 const params = new URLSearchParams(location.search);
 const SEM_TRAVA = params.has('semtrava'); // testes automáticos: não pausa sem o mouse travado
+// Celular/tablet: controles de toque no lugar de teclado e mouse (?toque=1 força).
+const TOQUE = params.has('toque') || matchMedia('(pointer: coarse)').matches;
+if (TOQUE) document.body.classList.add('toque');
 
 // ---------- Mundo ----------
 const canvas = document.getElementById('tela');
-const ps1 = criarRenderPS1(canvas);
+const camera = new THREE.PerspectiveCamera(70, 4 / 3, 0.05, 40);
+const ps1 = criarRenderPS1(canvas, {
+  preencher: TOQUE,
+  aoMudarProporcao: (p) => { camera.aspect = p; camera.updateProjectionMatrix(); },
+});
+ps1.redimensionar();
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x000000);
 scene.fog = new THREE.Fog(0x000000, 2, 11);
-const camera = new THREE.PerspectiveCamera(70, 4 / 3, 0.05, 40);
 scene.add(camera);
 
 const mundo = criarBanheiro(scene);
 const efeitos = { lanterna: false, cabine01: false, mostrarRota: false, leite: null };
 let cabineAberta = false;
 const paredesAtuais = () => (cabineAberta ? PAREDES : [...PAREDES, mundo.paredeCabine01]);
-const jogador = criarJogador(camera, canvas, paredesAtuais, PONTOS.inicio);
+const controlesToque = TOQUE ? criarControlesToque(document.getElementById('ui')) : null;
+const jogador = criarJogador(camera, canvas, paredesAtuais, PONTOS.inicio, { entrada: controlesToque?.entrada });
+// Trava o mouse no computador; no celular não existe.
+const travarMouse = () => { if (!SEM_TRAVA && !TOQUE) jogador.travar(); };
 jogador.olharPara({ x: 0, z: -2 });
 
 const lanterna = new THREE.SpotLight(0xfff2d0, 0, 14, 0.45, 0.5, 1.2);
@@ -41,7 +52,7 @@ lanterna.position.set(0, -0.1, 0);
 lanterna.target.position.set(0, -0.1, -1);
 camera.add(lanterna, lanterna.target);
 
-const ui = criarUI(document.getElementById('ui'));
+const ui = criarUI(document.getElementById('ui'), { toque: TOQUE });
 const audio = criarAudio();
 
 // ---------- Lógica ----------
@@ -287,6 +298,7 @@ function terminarNoite() {
   aparicao.visible = false;
   ui.escurecer(true);
   ui.mostrarHud(false);
+  controlesToque?.mostrar(false);
   document.exitPointerLock?.();
   setTimeout(() => {
     ui.escurecer(false);
@@ -405,10 +417,25 @@ addEventListener('keydown', (e) => {
   const m = /^Digit([1-8])$/.exec(e.code);
   if (m) usarItem(Number(m[1]) - 1);
 });
-canvas.addEventListener('click', () => { if (modo === 'jogando') jogador.travar(); });
-jogador.onSoltar(() => { if (modo === 'jogando' && !SEM_TRAVA) { pausado = true; ui.pausa(true); } });
+canvas.addEventListener('click', () => { if (modo === 'jogando') travarMouse(); });
+ui.onItem((i) => { if (modo === 'jogando' && !pausado && !(ui.ocupado() && !perguntaAberta)) usarItem(i); });
+if (controlesToque) {
+  controlesToque.mostrar(false);
+  controlesToque.onAcao(() => {
+    if (modo !== 'jogando' || pausado) return;
+    if (ui.ocupado()) { ui.tecla('KeyE'); return; } // avança a conversa
+    interacaoAtual()?.acao();
+  });
+  controlesToque.onPausa(() => {
+    if (modo !== 'jogando') return;
+    pausado = true;
+    controlesToque.zerar();
+    ui.pausa(true, () => { pausado = false; ui.pausa(false); });
+  });
+}
+jogador.onSoltar(() => { if (modo === 'jogando' && !SEM_TRAVA && !TOQUE) { pausado = true; ui.pausa(true); } });
 jogador.onTravar(() => { pausado = false; ui.pausa(false); });
-document.addEventListener('pointerlockerror', () => { if (modo === 'jogando' && !SEM_TRAVA) { pausado = true; ui.pausa(true); } });
+document.addEventListener('pointerlockerror', () => { if (modo === 'jogando' && !SEM_TRAVA && !TOQUE) { pausado = true; ui.pausa(true); } });
 
 // ---------- Derrota e checkpoint ----------
 function perder() {
@@ -418,6 +445,7 @@ function perder() {
   audio.tocar('susto'); ui.flash();
   document.exitPointerLock?.();
   ui.mostrarHud(false);
+  controlesToque?.mostrar(false);
   ui.derrota(`${String(clock.hora()).padStart(2, '0')}:00`, () => {
     noite.voltarCheckpoint();
     visitantes.forEach((v) => { scene.remove(v.mesh); descartar(v.mesh); });
@@ -433,7 +461,9 @@ function perder() {
     jogador.olharPara({ x: 0, z: -2 });
     modo = 'jogando';
     ui.mostrarHud(true);
-    if (!SEM_TRAVA) jogador.travar();
+    controlesToque?.zerar();
+    controlesToque?.mostrar(true);
+    travarMouse();
   });
 }
 
@@ -448,7 +478,9 @@ function atualizar(dt, t) {
   const ocupado = ui.ocupado();
   if (efeitos.leite) { efeitos.leite.segundos -= dt; if (efeitos.leite.segundos <= 0) efeitos.leite = null; }
   if (vendoMonitor > 0) vendoMonitor -= dt;
-  jogador.update(dt, efeitos.leite ? efeitos.leite.velocidade : 1, !ocupado && vendoMonitor <= 0);
+  const podeMexer = !ocupado && vendoMonitor <= 0;
+  if (controlesToque) { const o = controlesToque.consumirOlhar(); if (podeMexer) jogador.girar(o.dx, o.dy); }
+  jogador.update(dt, efeitos.leite ? efeitos.leite.velocidade : 1, podeMexer);
 
   if (perguntaAberta) {
     const r = quiz.tick(dt);
@@ -499,6 +531,7 @@ function atualizar(dt, t) {
     tempoHud = 0.25;
     const it = !ocupado && !perguntaAberta ? interacaoAtual() : null;
     ui.dica(it?.texto ?? null);
+    controlesToque?.rotuloAcao(ui.ocupado() && !perguntaAberta ? 'Continuar' : it?.texto ?? null);
     const itens = inventario.itens().map((id, i) => ({ tecla: i + 1, nome: ITENS[id].nome }));
     const tarefas = noite.fase() === 'final'
       ? [{ texto: 'Apagar a luz no quadro do depósito', feita: false }]
@@ -532,7 +565,12 @@ function comecar() {
   modo = 'jogando';
   ui.mostrarHud(true);
   noite.update().forEach(tratarEvento);
-  if (!SEM_TRAVA) jogador.travar();
+  if (controlesToque) {
+    controlesToque.mostrar(true);
+    // Tela cheia e paisagem quando o celular deixa (pode recusar; o jogo segue igual).
+    document.documentElement.requestFullscreen?.().then(() => screen.orientation?.lock?.('landscape')).catch(() => {});
+  }
+  travarMouse();
 }
 
 // ?galeria=1 mostra todos os personagens lado a lado (para conferir a aparência).

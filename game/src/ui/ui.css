@@ -68,3 +68,44 @@ body { display: grid; place-items: center; font-family: var(--fonte); color: var
 
 /* Pausado: esconde pergunta e diálogo (o tempo está parado) */
 #ui.pausado .pergunta, #ui.pausado .dialogo { visibility: hidden; }
+
+/* ---------- Celular (toque) ---------- */
+#toque { position: fixed; inset: 0; z-index: 1; touch-action: none; user-select: none; -webkit-user-select: none; }
+#ui { z-index: 2; }
+.toque-olhar { position: absolute; top: 0; right: 0; bottom: 0; left: 40%; }
+.toque-joy { position: absolute; left: 0; bottom: 0; width: 40%; height: 70%; }
+.toque-joy-base {
+  position: absolute; left: calc(70px + env(safe-area-inset-left, 0px)); top: calc(100% - 90px);
+  width: 112px; height: 112px; margin: -56px 0 0 -56px; border-radius: 50%;
+  border: 2px solid rgba(242, 239, 230, 0.35); background: rgba(0, 0, 0, 0.25); opacity: 0.6;
+}
+.toque-joy-base.ativo { opacity: 1; }
+.toque-joy-pino {
+  position: absolute; left: 50%; top: 50%; width: 48px; height: 48px; margin: -24px 0 0 -24px;
+  border-radius: 50%; background: rgba(232, 197, 71, 0.75);
+}
+.toque-acao, .toque-pausa { position: absolute; font-family: var(--fonte); color: var(--texto); border: 2px solid var(--destaque); background: rgba(8, 10, 9, 0.75); }
+.toque-acao {
+  right: calc(18px + env(safe-area-inset-right, 0px)); bottom: calc(22px + env(safe-area-inset-bottom, 0px));
+  min-width: 76px; height: 76px; border-radius: 38px; font-size: 30px; padding: 0 14px;
+}
+.toque-acao.com-texto { font-size: 20px; max-width: 42vw; line-height: 1; }
+.toque-pausa { top: calc(10px + env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%); width: 46px; height: 40px; font-size: 22px; }
+body.toque .dica { display: none; }
+body.toque .hud-itens { bottom: auto; top: calc(56px + env(safe-area-inset-top, 0px)); }
+body.toque .hud-itens .item { pointer-events: auto; font-size: 1em; padding: 4px 10px; }
+body.toque .hud-tarefas { font-size: 0.75em; }
+body.toque #ui { font-size: clamp(15px, 4.2vh, 24px); }
+body.toque .pergunta .respostas button { padding: 8px 12px; }
+.hud-itens .item { font: inherit; color: inherit; }
+
+.aviso-girar { display: none; }
+@media (orientation: portrait) {
+  body.toque .aviso-girar {
+    display: grid; place-items: center; position: fixed; inset: 0; z-index: 5; background: var(--fundo);
+    text-align: center; padding-inline: max(16px, env(safe-area-inset-left, 0px)) max(16px, env(safe-area-inset-right, 0px));
+    font-size: 26px; color: var(--destaque);
+  }
+}
+body.toque .dialogo { width: calc(100vw - 2 * (150px + env(safe-area-inset-left, 0px))); min-width: 0; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
+body.toque .legenda { bottom: 6em; width: calc(100vw - 320px); }

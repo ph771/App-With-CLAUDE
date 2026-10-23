@@ -9,7 +9,7 @@ const el = (tag, classe, html = '') => {
 };
 const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
-export function criarUI(root) {
+export function criarUI(root, { toque = false } = {}) {
   const camadas = {
     mira: el('div', 'mira'),
     tarefas: el('div', 'hud-tarefas'),
@@ -24,7 +24,12 @@ export function criarUI(root) {
   };
   const hud = el('div', 'oculto');
   for (const k of ['mira', 'tarefas', 'relogio', 'erros', 'itens', 'dica', 'legenda']) hud.append(camadas[k]);
-  root.append(hud, camadas.toast, camadas.flash, camadas.escuro);
+  root.append(hud, camadas.toast, camadas.flash, camadas.escuro, el('div', 'aviso-girar', 'Deite o celular<br>para jogar'));
+  let aoTocarItem = null;
+  camadas.itens.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-i]');
+    if (b && aoTocarItem) aoTocarItem(Number(b.dataset.i));
+  });
 
   let modal = null; // diálogo ou pergunta aberta
   let timerToast = null, timerLegenda = null;
@@ -50,18 +55,22 @@ export function criarUI(root) {
         <h2>Episódio 1 — A Ronda do Fiscal</h2>
         <p class="aviso-parodia">${esc(AVISO_PARODIA)}</p>
         <p>Você é o zelador do turno da noite de um banheiro público 24h.<br>Sobreviva até as 06:00.</p>
-        <p class="controles">Mouse: olhar · WASD: andar · E: interagir · 1–8: usar item · Esc: pausar<br>
-        Quando o Fiscal perguntar, responda com 1, 2 ou 3. <b>Não diga nada com "trans".</b></p>
+        <p class="controles">${toque
+          ? 'Analógico à esquerda: andar · Arraste à direita: olhar · Botão amarelo: interagir · Toque nos itens para usar'
+          : 'Mouse: olhar · WASD: andar · E: interagir · 1–8: usar item · Esc: pausar'}<br>
+        Quando o Fiscal perguntar, ${toque ? 'toque na resposta' : 'responda com 1, 2 ou 3'}. <b>Não diga nada com "trans".</b></p>
       `, 'Começar plantão', onJogar);
     },
 
     mostrarHud(v) { hud.classList.toggle('oculto', !v); },
+    onItem(cb) { aoTocarItem = cb; },
 
     hud({ relogio, itens, tarefas, erros }) {
       camadas.relogio.textContent = relogio;
       camadas.tarefas.innerHTML = tarefas.map((t) => `<div class="${t.feita ? 'feita' : ''}">${t.feita ? '■' : '□'} ${esc(t.texto)}</div>`).join('');
       camadas.erros.innerHTML = [0, 1, 2].map((i) => `<span class="${i < erros ? '' : 'vazio'}">✕</span>`).join('');
-      camadas.itens.innerHTML = itens.map((it) => `<div class="item"><b>${it.tecla}</b> ${esc(it.nome)}</div>`).join('');
+      const html = itens.map((it, i) => `<button type="button" class="item" data-i="${i}"><b>${it.tecla}</b> ${esc(it.nome)}</button>`).join('');
+      if (camadas.itens.innerHTML !== html) camadas.itens.innerHTML = html;
     },
 
     dica(texto) {
@@ -92,7 +101,7 @@ export function criarUI(root) {
     // Diálogo: avança com E, Espaço ou clique.
     dialogo(nome, falas, onFim) {
       let i = 0;
-      const caixa = el('div', 'dialogo', `<div class="nome">${esc(nome)}</div><div class="texto"></div><div class="seguir">[E] continuar</div>`);
+      const caixa = el('div', 'dialogo', `<div class="nome">${esc(nome)}</div><div class="texto"></div><div class="seguir">${toque ? 'toque para continuar' : '[E] continuar'}</div>`);
       const mostrar = () => { caixa.querySelector('.texto').textContent = falas[i]; };
       const avancar = () => {
         i++;
@@ -131,14 +140,17 @@ export function criarUI(root) {
     // Devolve true se a janela aberta usou a tecla.
     tecla(code) { return modal ? modal.tecla(code) : false; },
 
-    pausa(mostrar) {
+    pausa(mostrar, onContinuar) {
       root.classList.toggle('pausado', mostrar);
       root.querySelector('.tela-pausa')?.remove();
-      if (mostrar) {
-        const t = el('div', 'tela-cheia tela-pausa', '<div class="conteudo"><h1>PAUSADO</h1><p>Clique para continuar o plantão.</p></div>');
-        t.style.pointerEvents = 'none';
-        root.append(t);
+      if (!mostrar) return;
+      if (onContinuar) {
+        telaCheia('<h1>PAUSADO</h1>', 'Continuar plantão', onContinuar).classList.add('tela-pausa');
+        return;
       }
+      const t = el('div', 'tela-cheia tela-pausa', '<div class="conteudo"><h1>PAUSADO</h1><p>Clique para continuar o plantão.</p></div>');
+      t.style.pointerEvents = 'none';
+      root.append(t);
     },
 
     derrota(hora, onTentar) {

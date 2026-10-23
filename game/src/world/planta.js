@@ -1,84 +1,170 @@
-// Planta do banheiro público (metros). x = leste/oeste, z = norte(-)/sul(+).
-// Só dados: usada pela física, pela navegação do Fiscal e pela construção 3D.
+// Planta da Casa Legislativa de Vila Nova do Sul (metros, vista de cima).
+// Os andares ficam no mesmo plano, separados em x: térreo perto de 0, 1º andar perto de 100,
+// subsolo perto de 200. Escadas levam de um ao outro (teleporte).
 export const ALTURA_PAREDE = 3;
 const E = 0.1; // meia espessura da parede
 
-// Parede ao longo de x (z fixo) ou de z (x fixo), em caixas (AABB).
-const px = (z, x1, x2) => ({ minX: x1, maxX: x2, minZ: z - E, maxZ: z + E });
-const pz = (x, z1, z2) => ({ minX: x - E, maxX: x + E, minZ: z1, maxZ: z2 });
+export const ANDARES = { terreo: [-40, 50], '1andar': [60, 150], subsolo: [170, 250] };
+export function andarDe(p) {
+  for (const [nome, [a, b]] of Object.entries(ANDARES)) if (p.x >= a && p.x <= b) return nome;
+  return null;
+}
 
-export const REGIOES = {
-  hall: { minX: -4, maxX: 4, minZ: 0, maxZ: 6 },
-  corredor: { minX: -12, maxX: 12, minZ: -2, maxZ: 0 },
-  masculino: { minX: -12, maxX: -4, minZ: -8, maxZ: -2 },
-  feminino: { minX: 4, maxX: 12, minZ: -8, maxZ: -2 },
-  deposito: { minX: 12, maxX: 16, minZ: -4, maxZ: 1 },
-};
-
-export const PORTAS = {
-  masculino: { minX: -9, maxX: -8, z: -2 },
-  familia: { minX: -0.6, maxX: 0.6, z: -2 }, // trancada
-  feminino: { minX: 8, maxX: 9, z: -2 },
-  deposito: { x: 12, minZ: -1.6, maxZ: -0.4 },
-  entrada: { minX: -0.8, maxX: 0.8, z: 6 }, // por onde entram os visitantes
-};
-
-// Cabines: 4 em cada banheiro, encostadas na parede do fundo (z -8 a -6.4).
-const CAB_Z = [-8, -6.4];
-export const CABINES = {
-  masculino: [[-11.6, -10], [-10, -8.4], [-8.4, -6.8], [-6.8, -5.2]],
-  feminino: [[5.2, 6.8], [6.8, 8.4], [8.4, 10], [10, 11.6]],
-};
-export const CABINE_01 = { minX: -11.6, maxX: -10, minZ: CAB_Z[0], maxZ: CAB_Z[1] };
-// Porta da cabine 01: parede extra enquanto o jogador não tem a chave.
-export const PORTA_CABINE_01 = px(CAB_Z[1], -11.6, -10);
-
-const divisorias = Object.values(CABINES).flatMap((lista) => {
-  const xs = [...new Set(lista.flat())];
-  return xs.map((x) => pz(x, CAB_Z[0], CAB_Z[1]));
-});
-
-// Bancadas de pia (colidem) e espelhos.
-export const BANCADAS = {
-  masculino: { minX: -4.6, maxX: -4, minZ: -5.5, maxZ: -2.6 },
-  feminino: { minX: 4, maxX: 4.6, minZ: -5.5, maxZ: -2.6 },
-};
-export const GUICHE = { minX: -4, maxX: -2.8, minZ: 2, maxZ: 4.5 };
-
-export const PAREDES_SALA = [
-  // hall
-  pz(-4, 0, 6), pz(4, 0, 6), px(6, -4, 4),
-  // corredor: parede norte com as portas dos banheiros (a do banheiro família é trancada)
-  px(-2, -12, -9), px(-2, -8, 8), px(-2, 9, 12),
-  px(0, -12, -4), px(0, 4, 12), pz(-12, -2, 0),
-  // fim do corredor / entrada do depósito
-  pz(12, -4, -1.6), pz(12, -0.4, 1),
-  // masculino
-  pz(-12, -8, -2), pz(-4, -8, -2), px(-8, -12, -4),
-  // feminino
-  pz(4, -8, -2), pz(12, -8, -2), px(-8, 4, 12),
-  // banheiro família (fechado)
-  pz(-2, -6, -2), pz(2, -6, -2), px(-6, -2, 2),
-  // depósito
-  pz(16, -4, 1), px(-4, 12, 16), px(1, 12, 16),
+// Ordem importa: corredores primeiro (as fronteiras caem neles).
+export const SALAS = [
+  // Térreo
+  { id: 'corredor_t', nome: 'Corredor do térreo', minX: -20, maxX: 20, minZ: -3, maxZ: 0, piso: 'xadrez' },
+  { id: 'portaria', nome: 'Portaria', minX: -8, maxX: 8, minZ: 0, maxZ: 10, piso: 'granito' },
+  { id: 'masc_t', nome: 'Banheiro masculino (térreo)', minX: -20, maxX: -10, minZ: -11, maxZ: -3, piso: 'xadrez' },
+  { id: 'fem_t', nome: 'Banheiro feminino (térreo)', minX: 10, maxX: 20, minZ: -11, maxZ: -3, piso: 'xadrez' },
+  { id: 'familia', nome: 'Banheiro família', minX: -4, maxX: 4, minZ: -8, maxZ: -3, piso: 'xadrez', fechada: true },
+  { id: 'almox', nome: 'Almoxarifado', minX: -30, maxX: -20, minZ: -9, maxZ: 0, piso: 'concreto' },
+  { id: 'copa', nome: 'Copa', minX: 20, maxX: 28, minZ: -6, maxZ: 0, piso: 'granito' },
+  // 1º andar
+  { id: 'corredor_1', nome: 'Corredor dos gabinetes', minX: 76, maxX: 124, minZ: -3, maxZ: 0, piso: 'carpete' },
+  { id: 'hall_1', nome: 'Hall do 1º andar', minX: 92, maxX: 108, minZ: 0, maxZ: 6, piso: 'carpete' },
+  { id: 'plenario', nome: 'Plenário', minX: 86, maxX: 114, minZ: -20, maxZ: -3, piso: 'carpete' },
+  { id: 'banheiro_vip', nome: 'Banheiro dos Parlamentares', minX: 114, maxX: 124, minZ: -11, maxZ: -3, piso: 'marmore' },
+  { id: 'imprensa', nome: 'Sala de imprensa', minX: 76, maxX: 86, minZ: -11, maxZ: -3, piso: 'carpete' },
+  // Subsolo
+  { id: 'hall_s', nome: 'Escada do subsolo', minX: 196, maxX: 204, minZ: -3, maxZ: 3, piso: 'concreto' },
+  { id: 'maquinas', nome: 'Casa de máquinas', minX: 190, maxX: 214, minZ: -15, maxZ: -3, piso: 'concreto' },
 ];
-export const DIVISORIAS = divisorias;
 
-// Tudo que colide com o jogador.
-export const PAREDES = [...PAREDES_SALA, ...DIVISORIAS, BANCADAS.masculino, BANCADAS.feminino, GUICHE];
+// Portas abertas (vãos). `z` = porta numa parede horizontal (de x1 a x2); `x` = parede vertical.
+export const PORTAS = [
+  { x1: -8, x2: 8, z: 0 }, // portaria ↔ corredor (vão largo)
+  { x1: -15.5, x2: -14.5, z: -3 }, // masculino
+  { x1: 14.5, x2: 15.5, z: -3 }, // feminino
+  { x: -20, z1: -2.5, z2: -0.5 }, // almoxarifado
+  { x: 20, z1: -2.5, z2: -0.5 }, // copa
+  { x1: 92, x2: 108, z: 0 }, // hall ↔ corredor do 1º andar
+  { x1: 98.5, x2: 101.5, z: -3 }, // plenário
+  { x1: 118.5, x2: 119.5, z: -3 }, // banheiro dos parlamentares
+  { x1: 80.5, x2: 81.5, z: -3 }, // imprensa
+  { x1: 199, x2: 201, z: -3 }, // casa de máquinas
+];
 
+// Portas fechadas só de enfeite (desenhadas, sem vão).
+export const PORTAS_FECHADAS = [
+  { x1: -0.6, x2: 0.6, z: -3, placa: 'FAMÍLIA' },
+  { x1: -0.8, x2: 0.8, z: 10, placa: 'SAÍDA' },
+  { x1: 78, x2: 79.4, z: 0, placa: 'GAB. 01' },
+  { x1: 84, x2: 85.4, z: 0, placa: 'GAB. 13' },
+  { x1: 88, x2: 89.4, z: 0, placa: 'GAB. 22' },
+  { x1: 111, x2: 112.4, z: 0, placa: 'GAB. 17' },
+  { x1: 116, x2: 117.4, z: 0, placa: 'GAB. 45' },
+  { x1: 121, x2: 122.4, z: 0, placa: 'GAB. 69' },
+];
+
+// Escadas: `a` e `b` são os pontos de chegada (onde a pessoa aparece); `usarA`/`usarB` onde se aperta E.
+export const ESCADAS = [
+  {
+    id: 'principal', a: { x: 4.4, z: 2.2 }, b: { x: 104.4, z: 4.5 },
+    usarA: { x: 5.6, z: 1.6 }, usarB: { x: 105.4, z: 4.5 },
+    rotuloA: 'Subir ao 1º andar', rotuloB: 'Descer ao térreo',
+  },
+  {
+    id: 'subsolo', a: { x: -27.4, z: -7.2 }, b: { x: 200.4, z: 1.5 },
+    usarA: { x: -28.7, z: -7.7 }, usarB: { x: 201.4, z: 1.5 },
+    rotuloA: 'Descer à casa de máquinas', rotuloB: 'Subir ao almoxarifado',
+  },
+];
+
+// ---------- Paredes geradas a partir das salas e das portas ----------
+function cortar([a, b], buracos) {
+  let pedacos = [[a, b]];
+  for (const [h1, h2] of buracos) {
+    pedacos = pedacos.flatMap(([p1, p2]) => {
+      if (h2 <= p1 || h1 >= p2) return [[p1, p2]];
+      return [[p1, Math.max(p1, h1)], [Math.min(p2, h2), p2]].filter(([x, y]) => y - x > 1e-6);
+    });
+  }
+  return pedacos;
+}
+
+function paredesDaSala(s) {
+  const out = [];
+  for (const z of [s.minZ, s.maxZ]) {
+    const buracos = PORTAS.filter((d) => d.z !== undefined && Math.abs(d.z - z) < 1e-6).map((d) => [d.x1, d.x2]);
+    for (const [x1, x2] of cortar([s.minX, s.maxX], buracos)) out.push({ minX: x1, maxX: x2, minZ: z - E, maxZ: z + E });
+  }
+  for (const x of [s.minX, s.maxX]) {
+    const buracos = PORTAS.filter((d) => d.x !== undefined && Math.abs(d.x - x) < 1e-6).map((d) => [d.z1, d.z2]);
+    for (const [z1, z2] of cortar([s.minZ, s.maxZ], buracos)) out.push({ minX: x - E, maxX: x + E, minZ: z1, maxZ: z2 });
+  }
+  return out;
+}
+
+export const PAREDES_SALA = SALAS.flatMap(paredesDaSala);
+
+// ---------- Móveis (colidem com o jogador; o Fiscal é fantasma e atravessa) ----------
+const caixa = (tipo, minX, maxX, minZ, maxZ, altura, extra = {}) => ({ tipo, minX, maxX, minZ, maxZ, altura, ...extra });
+
+// Cabines: 4 por banheiro do térreo, 2 no banheiro dos parlamentares, encostadas na parede do fundo.
+export const CABINES = [
+  ...[[-19.6, -18], [-18, -16.4], [-16.4, -14.8], [-14.8, -13.2]].map(([a, b], i) => ({ sala: 'masc_t', x1: a, x2: b, z1: -11, z2: -9.4, numero: i + 1 })),
+  ...[[13.2, 14.8], [14.8, 16.4], [16.4, 18], [18, 19.6]].map(([a, b], i) => ({ sala: 'fem_t', x1: a, x2: b, z1: -11, z2: -9.4, numero: i + 1 })),
+  ...[[114.4, 116.2], [116.2, 118]].map(([a, b], i) => ({ sala: 'banheiro_vip', x1: a, x2: b, z1: -11, z2: -9.2, numero: i + 1 })),
+];
+export const CABINE_01 = { minX: -19.6, maxX: -18, minZ: -11, maxZ: -9.4 };
+export const PORTA_CABINE_01 = { minX: -19.6, maxX: -18, minZ: -9.4 - E, maxZ: -9.4 + E };
+
+const divisorias = [...new Set(CABINES.map((c) => `${c.sala}|${c.x1}|${c.z1}|${c.z2}`).concat(CABINES.map((c) => `${c.sala}|${c.x2}|${c.z1}|${c.z2}`)))]
+  .map((k) => { const [, x, z1, z2] = k.split('|').map(Number); return caixa('divisoria', x - 0.03, x + 0.03, z1, z2, 2.1); });
+
+export const MOVEIS = [
+  caixa('guiche', -8, -6.6, 3, 6.5, 1),
+  caixa('escada', 6, 8, 0.3, 3, 3, { sobe: 'leste' }),
+  caixa('escada', 106, 108, 3, 6, 3, { sobe: 'leste' }),
+  caixa('escada', 202, 204, 0, 3, 3, { sobe: 'leste' }),
+  caixa('bancada', -10.6, -10, -8.5, -5.5, 0.9, { espelho: 'oeste' }),
+  caixa('bancada', 10, 10.6, -8.5, -5.5, 0.9, { espelho: 'leste' }),
+  caixa('bancada', 123.4, 124, -9, -5, 0.9, { espelho: 'oeste', ouro: true }),
+  caixa('prateleira', -30, -29.2, -6.5, -0.8, 2.2),
+  caixa('prateleira', -27, -21, -9, -8.2, 2.2),
+  caixa('mesa', 22.5, 25.5, -4, -2.6, 0.8),
+  caixa('balcao', 27.4, 28, -5.5, -0.5, 1),
+  caixa('tribuna', 97, 103, -19.2, -17.6, 1.2),
+  ...[-14, -11.5, -9, -6.6].flatMap((z) => [caixa('cadeiras', 88, 98, z - 0.3, z + 0.3, 0.9), caixa('cadeiras', 102, 112, z - 0.3, z + 0.3, 0.9)]),
+  caixa('mesa', 78, 84, -9.2, -8.2, 0.8),
+  caixa('caixa_agua', 192, 197, -14, -9, 3),
+  caixa('bomba', 206, 209, -14.5, -12.5, 1.2),
+  ...divisorias,
+];
+
+export const PAREDES = [...PAREDES_SALA, ...MOVEIS];
+
+// ---------- Pontos ----------
 export const PONTOS = {
-  inicio: { x: 0, z: 3.5 },
-  guiche: { x: -2.3, z: 3.2 },
-  monitor: { x: -3.4, z: 3.2 },
-  telefone: { x: -3.4, z: 2.4 },
-  poca: { x: 1.8, z: 1.4 },
-  origemFiscal: { x: 8.5, z: -1 },
-  quadroLuz: { x: 15.7, z: -2.5 },
-  espelhoMasc: { x: -4.1, z: -4 },
-  espelhoFem: { x: 4.1, z: -4 },
-  entradaVisitante: { x: 0, z: 5.5 },
-  esperaVisitante: { x: 0.8, z: 1.6 },
-  saidaVisitante: { x: -8.5, z: -3 },
-  cameraMonitor: { x: 0, y: 2.7, z: -1.6 },
+  inicio: { x: 0, z: 7 },
+  guiche: { x: -5.9, z: 4.8 },
+  monitor: { x: -7.6, z: 5.2 },
+  telefone: { x: -7.6, z: 3.6 },
+  origemFiscal: { x: 118.5, z: -1.5 },
+  quadroGeral: { x: 213, z: -9 },
+  painel: { x: 100, z: -16.6 },
+  cameraMonitor: { x: 94, y: 2.7, z: -1.5, olharX: 119, olharZ: -1.5 },
+  portaAlmox: { x: -18.8, z: -1.5 },
+};
+
+// Onde ficam as ferramentas no almoxarifado (pegar com E).
+export const FERRAMENTAS_LUGAR = {
+  esfregao: { x: -28.5, z: -1.6 },
+  rolos: { x: -28.5, z: -3.6 },
+  desentupidor: { x: -28.5, z: -5.6 },
+  lampada: { x: -25.5, z: -7.6 },
+  sabonete: { x: -22.5, z: -7.6 },
+};
+
+// Onde cada visitante espera (Versão B).
+export const LUGAR_VISITANTE = {
+  lulao: { x: 24, z: -1.2 },
+  mamae_falou: { x: 3, z: 3.6 },
+  renan: { x: 90, z: -1.5 },
+  moraez: { x: 110, z: -1.5 },
+  kim: { x: 95.5, z: -16 },
+  nicolas: { x: 80, z: -6 },
+  jairo: { x: 83, z: -6 },
+  flavio: { x: 78.7, z: -1.2 },
 };

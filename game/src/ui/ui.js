@@ -99,7 +99,7 @@ export function criarUI(root) {
         if (i < falas.length) { mostrar(); return; }
         caixa.remove(); modal = null; onFim?.();
       };
-      modal = { tecla(code) { if (code === 'KeyE' || code === 'Space' || code === 'Enter') avancar(); } };
+      modal = { tecla(code) { if (code !== 'KeyE' && code !== 'Space' && code !== 'Enter') return false; avancar(); return true; } };
       caixa.addEventListener('click', avancar);
       caixa.style.pointerEvents = 'auto';
       mostrar();
@@ -119,7 +119,7 @@ export function criarUI(root) {
       caixa.querySelectorAll('button').forEach((b) => b.addEventListener('click', () => escolher(Number(b.dataset.i))));
       modal = {
         pergunta: true,
-        tecla(code) { const n = { Digit1: 0, Digit2: 1, Digit3: 2, Digit4: 3, Numpad1: 0, Numpad2: 1, Numpad3: 2, Numpad4: 3 }[code]; if (n !== undefined && n < opcoes.length) escolher(n); },
+        tecla(code) { const n = { Digit1: 0, Digit2: 1, Digit3: 2, Digit4: 3, Numpad1: 0, Numpad2: 1, Numpad3: 2, Numpad4: 3 }[code]; if (n === undefined || n >= opcoes.length) return false; escolher(n); return true; },
       };
       root.append(caixa);
       return {
@@ -128,9 +128,11 @@ export function criarUI(root) {
       };
     },
 
-    tecla(code) { if (modal) { modal.tecla(code); return true; } return false; },
+    // Devolve true se a janela aberta usou a tecla.
+    tecla(code) { return modal ? modal.tecla(code) : false; },
 
     pausa(mostrar) {
+      root.classList.toggle('pausado', mostrar);
       root.querySelector('.tela-pausa')?.remove();
       if (mostrar) {
         const t = el('div', 'tela-cheia tela-pausa', '<div class="conteudo"><h1>PAUSADO</h1><p>Clique para continuar o plantão.</p></div>');

@@ -43,3 +43,8 @@ test('snapshot e restaurar', () => {
   inv.usar('ordem', ctx()); inv.restaurar(s);
   assert.deepEqual(inv.itens(), ['ordem', 'mapa']);
 });
+test('caneca respeita o limite de arremesso (paredes)', () => {
+  const c = ctx(); c.limitarArremesso = (_de, _para) => ({ x: 0, z: -2 });
+  com('caneca').usar('caneca', c);
+  assert.deepEqual(c.chamadas, [['distrair', { x: 0, z: -2 }]]);
+});

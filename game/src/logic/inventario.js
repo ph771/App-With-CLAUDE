@@ -4,10 +4,14 @@ const DISTANCIA_CANECA = 8;
 const EFEITOS = {
   lanterna: ({ efeitos }) => { efeitos.lanterna = !efeitos.lanterna; },
   microfone: ({ fiscal }) => fiscal.pausar(20),
-  caneca: ({ fiscal, jogador }) => fiscal.distrair({
-    x: jogador.x + jogador.direcao.x * DISTANCIA_CANECA,
-    z: jogador.z + jogador.direcao.z * DISTANCIA_CANECA,
-  }),
+  caneca: ({ fiscal, jogador, limitarArremesso }) => {
+    const alvo = {
+      x: jogador.x + jogador.direcao.x * DISTANCIA_CANECA,
+      z: jogador.z + jogador.direcao.z * DISTANCIA_CANECA,
+    };
+    // A caneca para na primeira parede.
+    fiscal.distrair(limitarArremesso ? limitarArremesso({ x: jogador.x, z: jogador.z }, alvo) : alvo);
+  },
   ordem: ({ fiscal }) => fiscal.suspender(30),
   peruca: ({ quiz }) => quiz.pular(),
   leite: ({ efeitos }) => { efeitos.leite = { velocidade: 1.5, segundos: 60 }; },

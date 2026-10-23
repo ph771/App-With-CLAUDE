@@ -4,6 +4,7 @@ import { criarBanheiro } from './world/banheiro.js';
 import { criarJogador } from './world/jogador.js';
 import { criarRenderPS1 } from './world/ps1.js';
 import { PAREDES, PONTOS, CABINE_01 } from './world/planta.js';
+import { temVisao } from './world/fisica.js';
 import { criarPersonagem, animarParado, animarAndando, IDS_PERSONAGENS } from './world/personagens.js';
 import { proximoAlvo, regiaoDe } from './world/nav.js';
 import { createClock } from './logic/clock.js';
@@ -71,6 +72,21 @@ let vendoMonitor = 0;
 let tempoPasso = 0;
 let checkpointExtra = null;
 let ultimaPosFiscal = fiscal.posicao();
+let agendados = []; // { em: segundos de jogo, fn } — param na pausa e somem na derrota
+
+function agendar(segundos, fn) { agendados.push({ em: segundos, fn }); }
+function rodarAgendados(dt) {
+  const prontos = [];
+  agendados = agendados.filter((a) => { a.em -= dt; if (a.em <= 0) { prontos.push(a.fn); return false; } return true; });
+  prontos.forEach((fn) => fn());
+}
+
+function descartar(obj) {
+  obj.traverse((o) => {
+    o.geometry?.dispose();
+    for (const m of [].concat(o.material ?? [])) { m.map?.dispose(); m.dispose(); }
+  });
+}
 
 // ---------- Visitantes ----------
 // Onde cada visitante espera no hall (sem encostar no guichê nem nas paredes).
@@ -121,7 +137,7 @@ function atualizarVisitantes(dt, t) {
       }
       if (Math.hypot(vis.alvo.x - vis.mesh.position.x, vis.alvo.z - vis.mesh.position.z) < 0.05) {
         if (vis.estado === 'entrando') vis.estado = 'esperando';
-        else { scene.remove(vis.mesh); vis.removido = true; audio.tocar('descarga'); }
+        else { scene.remove(vis.mesh); descartar(vis.mesh); vis.removido = true; audio.tocar('descarga'); }
       }
     } else {
       vis.mesh.rotation.y = Math.atan2(pj.x - p.x, pj.z - p.z);
@@ -182,7 +198,7 @@ function comecarSusto(id) {
     case 'luz_apaga':
       audio.tocar('interruptor');
       apagao = 4;
-      setTimeout(() => { if (modo === 'jogando') { mostrarAparicao(frente(2), 0.7); audio.tocar('susto'); } }, 3000);
+      agendar(3, () => { mostrarAparicao(frente(2), 0.7); audio.tocar('susto'); });
       break;
     case 'batidas_cabine':
       audio.tocar('batida');
@@ -232,19 +248,13 @@ function atualizarLuzes(dt, t) {
 
 // ---------- Pergunta do Fiscal ----------
 function abrirPergunta(final = false) {
-  const p = fiscal.posicao();
-  jogador.olharPara(p);
+  if (!final) jogador.olharPara(fiscal.posicao()); // na final ele já está atrás de você
   audio.tocar('passo_molhado');
   const mostrada = quiz.iniciar(final);
   const extra = inventario.tem('peruca') ? '(Usar a peruca)' : null;
   perguntaAberta = { final };
   perguntaAberta.controles = ui.pergunta({ ...mostrada, extra }, (i) => {
-    if (i === 3) {
-      inventario.usar('peruca', ctxItens());
-      ui.legenda('Fiscal Pavonato', 'Opa... desculpa, achei que era outra pessoa.', 4);
-      fecharPergunta(null);
-      return;
-    }
+    if (i === 3) { usarPeruca(); return; }
     fecharPergunta(quiz.responder(i).segura);
   });
 }
@@ -264,10 +274,10 @@ function fecharPergunta(segura) {
   }
   fiscalMesh.getObjectByName('peruca').visible = Math.random() < 0.5; // troca de peruca entre aparições
   if (final && segura === false && !quiz.perdeu()) {
-    setTimeout(() => { if (modo === 'jogando' && !perguntaAberta) abrirPergunta(true); }, 1800);
+    agendar(1.8, () => { if (!perguntaAberta) abrirPergunta(true); });
     return;
   }
-  if (!final) fiscal.voltarParaOrigem();
+  if (!final) { fiscal.voltarParaOrigem(); fiscal.pausar(3); }
 }
 
 function terminarNoite() {
@@ -288,14 +298,32 @@ function terminarNoite() {
 }
 
 // ---------- Itens ----------
+// A caneca voa até a primeira parede (ou até onde há chão).
+function limitarArremesso(de, para) {
+  const d = Math.hypot(para.x - de.x, para.z - de.z);
+  let ultimo = de;
+  for (let s = 0.25; s <= d; s += 0.25) {
+    const p = { x: de.x + ((para.x - de.x) * s) / d, z: de.z + ((para.z - de.z) * s) / d };
+    if (!regiaoDe(p) || !temVisao(de, p, paredesAtuais())) break;
+    ultimo = p;
+  }
+  return ultimo;
+}
 function ctxItens() {
   const p = jogador.posicao();
-  return { fiscal, quiz, jogador: { ...p, direcao: jogador.direcao() }, efeitos };
+  return { fiscal, quiz, jogador: { ...p, direcao: jogador.direcao() }, efeitos, limitarArremesso };
+}
+
+function usarPeruca() {
+  inventario.usar('peruca', ctxItens());
+  ui.legenda('Fiscal Pavonato', 'Opa... desculpa, achei que era outra pessoa.', 4);
+  fecharPergunta(null);
 }
 
 function usarItem(indice) {
   const id = inventario.itens()[indice];
   if (!id) return;
+  if (id === 'peruca' && perguntaAberta) { usarPeruca(); return; }
   const r = inventario.usar(id, ctxItens());
   if (!r.ok) { if (r.msg) ui.aviso(r.msg, 1.5); return; }
   audio.tocar('item');
@@ -365,13 +393,14 @@ function mostrarAparicaoFinal() {
 function atenderTelefone() {
   telefoneTocando = 0;
   ui.legenda('Telefone', '(silêncio... só uma respiração do outro lado)', 3.5);
-  setTimeout(() => ui.legenda('Telefone', 'Alôôôô? ... É do banheiro? Tô indo aí fiscalizar.', 4.5), 3500);
+  agendar(3.5, () => ui.legenda('Telefone', 'Alôôôô? ... É do banheiro? Tô indo aí fiscalizar.', 4.5));
 }
 
 // ---------- Teclado e mouse ----------
 addEventListener('keydown', (e) => {
-  if (modo !== 'jogando' || pausado) return;
+  if (modo !== 'jogando' || pausado || e.repeat) return;
   if (ui.tecla(e.code)) { e.preventDefault(); return; }
+  if (ui.ocupado() && !perguntaAberta) return; // durante a conversa, só E avança
   if (e.code === 'KeyE') { interacaoAtual()?.acao(); return; }
   const m = /^Digit([1-8])$/.exec(e.code);
   if (m) usarItem(Number(m[1]) - 1);
@@ -379,17 +408,19 @@ addEventListener('keydown', (e) => {
 canvas.addEventListener('click', () => { if (modo === 'jogando') jogador.travar(); });
 jogador.onSoltar(() => { if (modo === 'jogando' && !SEM_TRAVA) { pausado = true; ui.pausa(true); } });
 jogador.onTravar(() => { pausado = false; ui.pausa(false); });
+document.addEventListener('pointerlockerror', () => { if (modo === 'jogando' && !SEM_TRAVA) { pausado = true; ui.pausa(true); } });
 
 // ---------- Derrota e checkpoint ----------
 function perder() {
   modo = 'derrota';
+  agendados = [];
   if (perguntaAberta) { perguntaAberta.controles.fechar(); perguntaAberta = null; }
   audio.tocar('susto'); ui.flash();
   document.exitPointerLock?.();
   ui.mostrarHud(false);
   ui.derrota(`${String(clock.hora()).padStart(2, '0')}:00`, () => {
     noite.voltarCheckpoint();
-    visitantes.forEach((v) => scene.remove(v.mesh));
+    visitantes.forEach((v) => { scene.remove(v.mesh); descartar(v.mesh); });
     visitantes = [];
     if (checkpointExtra) {
       Object.assign(efeitos, checkpointExtra.efeitos);
@@ -412,6 +443,8 @@ let quadro = 0;
 let tempoHud = 0;
 
 function atualizar(dt, t) {
+  rodarAgendados(dt);
+  if (modo !== 'jogando') return;
   const ocupado = ui.ocupado();
   if (efeitos.leite) { efeitos.leite.segundos -= dt; if (efeitos.leite.segundos <= 0) efeitos.leite = null; }
   if (vendoMonitor > 0) vendoMonitor -= dt;
@@ -488,7 +521,7 @@ function loop(agora) {
 
 // ?minuto=N começa a noite mais tarde (para testes).
 if (params.has('minuto')) {
-  const alvo = Number(params.get('minuto'));
+  const alvo = Math.min(Number(params.get('minuto')) || 0, 360);
   while (clock.minutos() < alvo) { clock.tick(0.1); noite.update().forEach(tratarEvento); }
 }
 

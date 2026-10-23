@@ -103,3 +103,9 @@ test('usa navegar para contornar paredes', () => {
   passo(f, 4, { minuto: 130, jogador: { x: 30, z: 0 }, olhando: false });
   assert.ok(Math.abs(f.posicao().x) < 1e-6 && Math.abs(f.posicao().z - 2) < 1e-6, JSON.stringify(f.posicao()));
 });
+
+test('pausado não alcança o jogador, mesmo perto', () => {
+  const f = novo(); f.pausar(3);
+  assert.equal(passo(f, 2, { minuto: 130, jogador: { x: 1, z: 0 }, olhando: false }), null);
+  assert.equal(passo(f, 2, { minuto: 130, jogador: { x: 1, z: 0 }, olhando: false }), 'alcancou');
+});

@@ -65,3 +65,6 @@ body { display: grid; place-items: center; font-family: var(--fonte); color: var
 .flash.ativo { opacity: 0.85; transition: none; }
 .escuro { position: absolute; inset: 0; background: #000; opacity: 0; transition: opacity 1.5s; }
 .escuro.ativo { opacity: 1; }
+
+/* Pausado: esconde pergunta e diálogo (o tempo está parado) */
+#ui.pausado .pergunta, #ui.pausado .dialogo { visibility: hidden; }

@@ -50,8 +50,8 @@ export function createFiscal({ rota, origem, navegar = (_p, alvo) => alvo }) {
       if (s.suspenso > 0) { s.suspenso = Math.max(0, s.suspenso - dt); return null; }
       const vel = velocidadeBase(minuto) * s.mult;
       if (vel === 0) return null;
-      if (dist(s.pos, jogador) < DISTANCIA_ALCANCE) return 'alcancou';
       if (s.pausado > 0) { s.pausado = Math.max(0, s.pausado - dt); return null; }
+      if (dist(s.pos, jogador) < DISTANCIA_ALCANCE) return 'alcancou';
 
       if (s.distracao) {
         if (dist(s.pos, s.distracao) > 1e-9) { if (!olhando) andarAte(s.distracao, vel * dt); return null; }

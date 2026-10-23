@@ -9,7 +9,8 @@ import {
 } from './world/planta.js';
 import { temVisao } from './world/fisica.js';
 import { criarPersonagem, animarParado, animarAndando, IDS_PERSONAGENS } from './world/personagens.js';
-import { criarFerramentaNaMao, criarPagina, criarPoca } from './world/objetos.js';
+import { criarFerramentaNaMao, criarPagina } from './world/objetos.js';
+import { criarMarcador, animarMarcador } from './world/marcadores.js';
 import { proximoAlvo, regiaoDe } from './world/nav.js';
 import { createClock } from './logic/clock.js';
 import { createQuiz } from './logic/quiz.js';
@@ -132,7 +133,7 @@ const paginasMesh = PAGINAS.map((pg) => {
   return m;
 });
 const paginasLidas = new Set(); // não volta na derrota
-const pocasMesh = new Map(); // id da tarefa → mesh
+const marcadores = new Map(); // id da tarefa → marcador (some quando a tarefa é feita)
 
 let modo = 'inicio'; // inicio | jogando | derrota | fim
 let pausado = false;
@@ -229,18 +230,18 @@ function dispensarVisitantes() {
   visitantes = visitantes.filter((v) => v.estado !== 'feito');
 }
 
-// ---------- Poças do Fiscal ----------
-function sincronizarPocas() {
-  const abertas = new Set(noite.tarefas().filter((t) => t.poca && !t.feita).map((t) => t.id));
-  for (const [id, m] of pocasMesh) if (!abertas.has(id)) { scene.remove(m); descartar(m); pocasMesh.delete(id); }
-  for (const t of noite.tarefas()) {
-    if (!t.poca || t.feita || pocasMesh.has(t.id)) continue;
-    const m = criarPoca();
-    m.position.x = t.ponto.x; m.position.z = t.ponto.z;
+// ---------- Marcadores das tarefas (inclui as poças do Fiscal) ----------
+function sincronizarTarefas() {
+  const pendentes = new Map(noite.tarefas().filter((t) => !t.feita).map((t) => [t.id, t]));
+  for (const [id, m] of marcadores) if (!pendentes.has(id)) { scene.remove(m); descartar(m); marcadores.delete(id); }
+  for (const [id, t] of pendentes) {
+    if (marcadores.has(id)) continue;
+    const m = criarMarcador(t);
     scene.add(m);
-    pocasMesh.set(t.id, m);
+    marcadores.set(id, m);
   }
 }
+const sincronizarPocas = sincronizarTarefas;
 
 // ---------- Eventos da noite ----------
 function tratarEvento(e) {
@@ -347,7 +348,8 @@ function atualizarLuzes(dt) {
     const tremor = Math.random() < 0.015 ? Math.random() * 0.6 : 1;
     const fraca = noite.fase() === 'final' ? 0.6 : 1;
     const ligada = doAndar && !(apagao > 0);
-    l.luz.intensity = ligada ? l.base * tremor * fraca : 0;
+    const queimada = l.sala === 'fem_t' && noite.tarefas().some((x) => x.id === 'lampada_fem' && !x.feita);
+    l.luz.intensity = ligada ? l.base * (queimada ? (Math.random() < 0.08 ? 0.5 : 0.04) : tremor) * fraca : 0;
     l.tubo.material.color.setScalar(ligada ? 0.95 * tremor : 0.05);
   }
   // Espelho só reflete quando você está na mesma sala (economiza o celular).
@@ -737,6 +739,7 @@ function atualizar(dt, t) {
   atualizarSustos(dt);
   atualizarLuzes(dt);
   atualizarSom(dt);
+  for (const m of marcadores.values()) animarMarcador(m, t);
   paginasMesh.forEach((m, i) => { if (!paginasLidas.has(i)) m.position.y = 0.02 + Math.sin(t * 2 + i) * 0.015; });
 
   tempoHud -= dt;

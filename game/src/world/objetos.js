@@ -70,7 +70,8 @@ export function criarPagina() {
 
 // Poça d'água.
 export function criarPoca() {
-  const m = new THREE.Mesh(new THREE.CircleGeometry(0.6, 8), new THREE.MeshLambertMaterial({ color: 0x5a7a90, transparent: true, opacity: 0.6 }));
+  // Água: clara e brilhante, para aparecer até no granito escuro.
+  const m = new THREE.Mesh(new THREE.CircleGeometry(0.7, 10), new THREE.MeshPhongMaterial({ color: 0x8fc4e0, emissive: 0x16303c, specular: 0xffffff, shininess: 120, transparent: true, opacity: 0.75 }));
   m.rotation.x = -Math.PI / 2;
   m.position.y = 0.012;
   return m;

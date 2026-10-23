@@ -62,8 +62,10 @@ faz uma piada e deixa uma ajuda. Depois vai embora. As piadas usam só manias e 
 | 00h | **Lulão** | "Companheiro, nunca antes na história desse país um banheiro foi tão fiscalizado." / "Esse rapaz prometeu cuidar do banheiro. Eu prometi picanha. Ninguém entregou." | **Lanterna** |
 | 01h | **Mamãe Falou** | Entra filmando, como nas entrevistas de rua: "MAMÃE FALOU! Olha o cara de prancheta parado na porta do banheiro, gente!" | **Microfone:** se você usar, o Fiscal para para dar entrevista e você ganha tempo |
 | 02h | **Renan Santarém** | "Três milhões de votos pra fiscalizar banheiro, cara? É meio louco isso aí." | **Caneca:** você joga longe e o Fiscal vai atrás do barulho |
-| 03h | **Kim Katagiri** | Fala muito rápido: "Fiz uma live de 4 horas explicando por que isso é um absurdo, você viu? Não viu? Vou mandar o link." | **Mapa** do banheiro com o caminho que o Fiscal faz |
+| 02h30 | **Ministro Moraez** | Entra com uma pasta de processos: "Este fiscal está sob investigação. O perfil dele está suspenso. O banheiro também, se precisar." | **Ordem de suspensão:** o Fiscal some por 30 segundos |
+| 03h | **Kim Katagiri** | Para na frente do espelho e uma mão gigante sai do nada e penteia o cabelo dele (o meme do pente). Ele suspira: "Fazendo o meme ao vivo... Parem de me mandar isso." Depois fala muito rápido sobre a live de 4 horas que fez contra o Fiscal. | **Mapa** do banheiro com o caminho que o Fiscal faz |
 | 04h | **Nicolas Ferrer** | Chega com uma peruca na mão: "Ele pegou minha peruca emprestada pra um vídeo e não devolveu." | **Peruca:** com ela, o Fiscal te confunde com outra pessoa uma vez e pula a pergunta |
+| 04h30 | **Seu Jairo** | "Esse rapaz aí? Mandei ele cuidar do banheiro pra parar de me ligar, talkey?" / "Banheiro não é prioridade. Prioridade é pão com leite condensado." | **Lata de leite condensado:** você corre mais rápido por 1 minuto |
 | 05h | **Flávio "Zero Um"** | "Eu sou o 01 em tudo, mas aqui na fila da cabine eu sou o 02." / "Meu pai mandou avisar que esse fiscal não é do partido." | **Chave da cabine 01**, o único lugar onde você pode se esconder |
 
 As ajudas são de uso único. O jogador escolhe a hora certa de usar cada uma.
@@ -81,12 +83,14 @@ As ajudas são de uso único. O jogador escolhe a hora certa de usar cada uma.
 - Mamãe Falou entra filmando e pergunta se você também viu o "cara da prancheta".
 - Primeira pergunta do Fiscal (trocadilho fácil).
 - Renan Santarém entra, zomba do Fiscal e deixa a caneca.
+- Ministro Moraez chega com a pasta de processos e declara o Fiscal "sob investigação".
 
 ### 03h–04h — Perseguição
 - As luzes piscam. O Fiscal só anda quando você não olha para ele.
-- Kim Katagiri entra falando sem parar e deixa o mapa.
+- Kim Katagiri para no espelho, a mão gigante penteia o cabelo dele, e ele deixa o mapa.
 - Você encontra o crachá dele no chão: "Fiscal de Banheiro — Cargo inexistente".
 - Nicolas Ferrer aparece procurando a peruca e deixa uma de reserva com você.
+- Seu Jairo passa reclamando que o banheiro não é prioridade e deixa o leite condensado.
 
 ### 05h — O Fiscal no espelho
 - Flávio "Zero Um" entra, faz a piada da fila e te dá a chave da cabine 01.
@@ -114,18 +118,19 @@ O telefone do guichê toca: "Alô, é do TRANSporte? ... Digo, do banheiro? Prec
 ## Aparência dos personagens
 
 Estilo visual: caricatura low-poly, estilo PS1, sem foto real e sem rosto realista.
-**A aparência abaixo ainda precisa ser conferida com fotos de referência.** A busca não trouxe
-descrições físicas confiáveis, só os detalhes marcados como "confirmado".
+Todas as descrições abaixo foram feitas a partir das fotos de referência enviadas pelo usuário.
 
 | Personagem | Detalhes para a caricatura |
 |---|---|
 | Fiscal Pavonato | **Conferido pela foto enviada.** Jovem, rosto arredondado e liso, sem barba (só uma sombra leve). Cabelo castanho curto, um pouco mais alto em cima. Sobrancelhas retas e olhar fixo. Roupa típica: camiseta preta lisa, gola V ou redonda. Na caricatura: paletó barato e grande demais por cima da camiseta preta, prancheta e crachá. Usa perucas nas esquetes dele (CartaCapital), então pode trocar de peruca entre as aparições. |
-| Lulão | Barba e cabelo grisalhos, terno ou camisa vermelha. **A conferir por foto.** |
-| Mamãe Falou | Celular na mão, sempre filmando. Rosto e cabelo: **a conferir por foto**. |
-| Renan Santarém | Caneca na mão. Rosto e cabelo: **a conferir por foto**. |
-| Kim Katagiri | Jovem, de origem japonesa. Resto: **a conferir por foto**. |
-| Nicolas Ferrer | Jovem, terno, peruca na mão (lembrando a peruca do discurso de 2023). Resto: **a conferir por foto**. |
-| Flávio "Zero Um" | Terno, broche "01". Resto: **a conferir por foto**. |
+| Lulão | Barba e cabelo brancos e cheios, sorriso largo com olhos apertados. Chapéu panamá de palha, terno azul-marinho, gravata azul estampada, broche na lapela. |
+| Mamãe Falou | Cabelo preto curto com topete, barba cheia e aparada, sobrancelhas grossas. Terno preto e camisa clara sem gravata. Celular na mão, sempre filmando. |
+| Renan Santarém | Cabelo preto penteado para cima, cavanhaque grisalho, sorriso discreto de lado. Blazer azul-escuro e camisa branca aberta no colarinho. Caneca na mão. |
+| Ministro Moraez | Careca total e lisa, cabeça grande e redonda (exagerar o brilho). Sobrancelhas grossas, olhar fixo e sério, boca reta. Terno escuro, camisa azul-clara, gravata listrada. Pasta de processos debaixo do braço. |
+| Kim Katagiri | **Baseado no meme do pente**, como pedido: rosto bem redondo e inchado, óculos finos, barba rala no queixo, bigodinho, dois dentes da frente grandes aparecendo. Cabelo preto. Uma mão gigante com anel dourado penteia o cabelo dele com um pente branco. Terno escuro (ou camisa da seleção como variação). |
+| Nicolas Ferrer | Muito jovem, cabelo castanho volumoso e ondulado, rosto fino sem barba, cara séria de foto de documento. Terno preto e gravata preta. Peruca na mão. |
+| Seu Jairo | Cabelo grisalho escuro penteado para trás, sobrancelhas franzidas, boca virada para baixo, cara de bravo. Terno escuro, gravata listrada, broche verde-amarelo. Lata de leite condensado na mão. |
+| Flávio "Zero Um" | Cabelo castanho curto e penteado, rosto quadrado e liso, sorriso confiante. Camisa social azul-clara sem gravata. Broche "01". |
 
 ## Cuidados
 
@@ -137,6 +142,6 @@ descrições físicas confiáveis, só os detalhes marcados como "confirmado".
 
 ## Próximos passos
 
-1. Você envia uma foto de referência de cada personagem e aprova ou ajusta este roteiro.
+1. Você aprova ou ajusta este roteiro.
 2. Eu escrevo o plano de construção (passo a passo curto).
 3. Eu construo o jogo em partes: primeiro o banheiro e o movimento, depois o Fiscal, depois os visitantes.

@@ -354,7 +354,7 @@ function fecharPergunta(segura) {
     agendar(1.8, () => { if (!perguntaAberta) abrirPergunta(true); });
     return;
   }
-  if (!final) { fiscal.voltarParaOrigem(pontoDeRecomeco()); fiscal.pausar(3); fiscal.tregua(15); cacador.cacando = 0; }
+  if (!final) { fiscal.voltarParaOrigem(pontoDeRecomeco()); fiscal.pausar(3); fiscal.tregua(25); cacador.cacando = 0; }
 }
 
 // Depois de uma pergunta o Fiscal recomeça em outro andar (precisa da escada para te achar).
@@ -600,16 +600,17 @@ let anterior = performance.now();
 let quadro = 0;
 let tempoHud = 0;
 
-// Ronda: o Fiscal anda de sala em sala. Caça: quando te enxerga, vem atrás por 12 s.
-const PONTOS_RONDA = SALAS.filter((s) => !s.fechada && !SALAS_SEGURAS.includes(s.id))
+// Ronda: o Fiscal anda de sala em sala. Caça: quando te enxerga (até 9 m), vem atrás por 7 s.
+// A ronda passa por dentro das salas, nunca pelos patamares de escada nem pelos corredores.
+const PONTOS_RONDA = SALAS.filter((s) => !s.fechada && !SALAS_SEGURAS.includes(s.id) && !/corredor|hall|portaria/.test(s.id))
   .map((s) => ({ x: (s.minX + s.maxX) / 2, z: (s.minZ + s.maxZ) / 2 }));
 const cacador = { cacando: 0, ronda: PONTOS_RONDA[0] };
 
 function alvoDoFiscal(pj, minuto, dt) {
   const fp = fiscal.posicao();
   const seguro = minuto < 240 && SALAS_SEGURAS.includes(regiaoDe(pj));
-  const meVe = !seguro && mesmoAndar(fp, pj) && Math.hypot(fp.x - pj.x, fp.z - pj.z) < 12 && temVisao(fp, pj, PAREDES);
-  if (meVe) cacador.cacando = 12;
+  const meVe = !seguro && mesmoAndar(fp, pj) && Math.hypot(fp.x - pj.x, fp.z - pj.z) < 9 && temVisao(fp, pj, PAREDES);
+  if (meVe) cacador.cacando = 7;
   else cacador.cacando = Math.max(0, cacador.cacando - dt);
   if (cacador.cacando > 0) return pj;
   // Chegou no ponto de ronda (ou é inalcançável): sorteia outro.

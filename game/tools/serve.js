@@ -12,6 +12,8 @@ const TIPOS = {
   '.css': 'text/css; charset=utf-8',
   '.png': 'image/png',
   '.json': 'application/json',
+  '.glb': 'model/gltf-binary',
+  '.txt': 'text/plain; charset=utf-8',
 };
 
 createServer(async (req, res) => {

@@ -27,6 +27,7 @@ import { criarAudio } from './audio.js';
 import { criarControlesToque } from './ui/toque.js';
 import { carregarConfig, salvarConfig, PADRAO as CONFIG_PADRAO } from './logic/config.js';
 import { definirAnisotropia } from './world/texturas.js';
+import { carregarModelos, instanciar, temModelo } from './world/modelos.js';
 
 const params = new URLSearchParams(location.search);
 const SEM_TRAVA = params.has('semtrava'); // testes automáticos: não pausa sem o mouse travado
@@ -67,7 +68,14 @@ scene.background = new THREE.Color(0x000000);
 scene.fog = new THREE.Fog(0x000000, 3, 16);
 scene.add(camera);
 
-const mundo = criarPredio(scene);
+// Móveis prontos (Kenney, CC0). Se algum não carregar, o prédio usa caixas simples.
+const MODELOS = ['toilet', 'bathroomSink', 'trashcan', 'chairCushion', 'chairDesk', 'desk', 'computerScreen', 'computerKeyboard',
+  'table', 'chair', 'kitchenCabinet', 'kitchenCoffeeMachine', 'kitchenFridge', 'kitchenMicrowave', 'pottedPlant', 'plantSmall1',
+  'bench', 'loungeSofa', 'cardboardBoxClosed', 'cardboardBoxOpen', 'coatRackStanding', 'sideTable'];
+await carregarModelos(MODELOS);
+const mundo = criarPredio(scene, { instanciar });
+// ?modelos=1: vitrine com todos os modelos virados para +z (para conferir a frente de cada um).
+if (params.has('modelos')) MODELOS.forEach((n, i) => { const m = instanciar(n, { x: -6 + (i % 11) * 1.2, z: 2 + Math.floor(i / 11) * 2.2, altura: 0.9 }); if (m) scene.add(m); });
 const efeitos = { lanterna: false, cabine01: false, mostrarRota: false, leite: null };
 let cabineAberta = false;
 const paredesAtuais = () => (cabineAberta ? PAREDES : [...PAREDES, PORTA_CABINE_01]);

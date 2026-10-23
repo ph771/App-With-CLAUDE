@@ -123,17 +123,51 @@ export const MOVEIS = [
   caixa('bancada', 123.4, 124, -9, -5, 0.9, { espelho: 'oeste', ouro: true }),
   caixa('prateleira', -30, -29.2, -6.5, -0.8, 2.2),
   caixa('prateleira', -27, -21, -9, -8.2, 2.2),
-  caixa('mesa', 22.5, 25.5, -4, -2.6, 0.8),
+  caixa('mesa', 22.5, 25.5, -4, -2.6, 0.8, { modelo: 'copa' }),
   caixa('balcao', 27.4, 28, -5.5, -0.5, 1),
   caixa('tribuna', 97, 103, -19.2, -17.6, 1.2),
   ...[-14, -11.5, -9, -6.6].flatMap((z) => [caixa('cadeiras', 88, 98, z - 0.3, z + 0.3, 0.9), caixa('cadeiras', 102, 112, z - 0.3, z + 0.3, 0.9)]),
-  caixa('mesa', 78, 84, -9.2, -8.2, 0.8),
+  caixa('mesa', 78, 84, -9.2, -8.2, 0.8, { modelo: 'imprensa' }),
   caixa('caixa_agua', 192, 197, -14, -9, 3),
   caixa('bomba', 206, 209, -14.5, -12.5, 1.2),
   ...divisorias,
 ];
 
-export const PAREDES = [...PAREDES_SALA, ...MOVEIS];
+// Decoração com modelos prontos (Kenney, CC0). `rot`: para onde a frente olha (0 = +z).
+// `w`/`d`: caixa de colisão (largura em x, profundidade em z); sem eles, não colide.
+const deco = (modelo, x, z, rot, altura, w, d, y = 0) => ({ modelo, x, z, rot, altura, w, d, y });
+const NORTE = Math.PI, SUL = 0, LESTE = Math.PI / 2, OESTE = -Math.PI / 2;
+export const DECORACAO = [
+  // Portaria
+  deco('loungeSofa', -4.6, 9.45, NORTE, 0.8, 1.8, 0.8), deco('loungeSofa', -2.2, 9.45, NORTE, 0.8, 1.8, 0.8),
+  deco('pottedPlant', -7.5, 0.6, SUL, 1.1, 0.5, 0.5), deco('pottedPlant', 7.4, 9.4, NORTE, 1.1, 0.5, 0.5),
+  deco('trashcan', 2.2, 9.6, NORTE, 0.7, 0.4, 0.4),
+  // Corredor do térreo
+  deco('trashcan', -13.6, -2.6, SUL, 0.7, 0.4, 0.4), deco('trashcan', 13.6, -2.6, SUL, 0.7, 0.4, 0.4),
+  deco('pottedPlant', -6, -2.55, SUL, 1.1, 0.5, 0.5), deco('pottedPlant', 6, -2.55, SUL, 1.1, 0.5, 0.5),
+  // Banheiros do térreo
+  deco('trashcan', -10.5, -3.6, OESTE, 0.7, 0.4, 0.4), deco('trashcan', 10.5, -3.6, LESTE, 0.7, 0.4, 0.4),
+  // Copa
+  deco('kitchenFridge', 24.6, -5.55, SUL, 1.8, 0.8, 0.7), deco('pottedPlant', 20.6, -5.5, SUL, 1.1, 0.5, 0.5),
+  // Almoxarifado e casa de máquinas: caixas
+  deco('cardboardBoxClosed', -20.6, -6.6, OESTE, 0.45, 0.6, 0.6), deco('cardboardBoxOpen', -20.6, -7.6, OESTE, 0.45, 0.6, 0.6),
+  deco('cardboardBoxClosed', -20.6, -7.6, OESTE, 0.45, 0, 0, 0.45),
+  deco('cardboardBoxClosed', 213.2, -14.2, NORTE, 0.5, 0.7, 0.7), deco('cardboardBoxOpen', 212.2, -14.3, NORTE, 0.5, 0.7, 0.7),
+  deco('cardboardBoxClosed', 190.7, -14.3, NORTE, 0.5, 0.7, 0.7),
+  // Hall e corredor do 1º andar
+  deco('loungeSofa', 96, 5.5, NORTE, 0.8, 2.2, 0.9), deco('pottedPlant', 93, 5.5, NORTE, 1.1, 0.5, 0.5),
+  deco('coatRackStanding', 107.4, 0.6, SUL, 1.75, 0.4, 0.4), deco('sideTable', 98.4, 5.6, NORTE, 0.55, 0.7, 0.5),
+  deco('pottedPlant', 76.5, -2.5, LESTE, 1.1, 0.5, 0.5), deco('pottedPlant', 123.5, -2.5, OESTE, 1.1, 0.5, 0.5),
+  deco('trashcan', 102.5, -2.6, SUL, 0.7, 0.4, 0.4),
+  // Banheiro dos Parlamentares e imprensa
+  deco('pottedPlant', 114.6, -3.6, SUL, 1.1, 0.5, 0.5), deco('trashcan', 120.5, -3.6, SUL, 0.7, 0.4, 0.4),
+  deco('pottedPlant', 85.4, -3.6, SUL, 1.1, 0.5, 0.5), deco('chairDesk', 77, -4.5, LESTE, 1.0, 0.6, 0.6),
+];
+
+export const PAREDES = [
+  ...PAREDES_SALA, ...MOVEIS,
+  ...DECORACAO.filter((d) => d.w && d.d).map((d) => ({ minX: d.x - d.w / 2, maxX: d.x + d.w / 2, minZ: d.z - d.d / 2, maxZ: d.z + d.d / 2 })),
+];
 
 // ---------- Pontos ----------
 export const PONTOS = {

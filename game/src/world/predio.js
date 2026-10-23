@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import { Reflector } from 'three/addons/objects/Reflector.js';
 import {
-  ALTURA_PAREDE, SALAS, PORTAS, PORTAS_FECHADAS, CABINES, MOVEIS, PONTOS, FERRAMENTAS_LUGAR, paredesDaSala,
+  ALTURA_PAREDE, SALAS, PORTAS, PORTAS_FECHADAS, CABINES, MOVEIS, PONTOS, FERRAMENTAS_LUGAR, DECORACAO, paredesDaSala,
 } from './planta.js';
 import * as tex from './texturas.js';
 import { criarFerramenta } from './objetos.js';
@@ -31,7 +31,9 @@ const PAREDE_DA_SALA = {
 };
 const PISO = { xadrez: () => tex.pisoXadrez(), granito: () => tex.granito(), concreto: () => tex.concreto(), carpete: () => tex.carpete('#4a1a1a'), marmore: () => tex.marmore() };
 
-export function criarPredio(scene) {
+export function criarPredio(scene, { instanciar = () => null } = {}) {
+  // Põe um modelo pronto na cena; devolve false se ele não carregou (aí usa a caixa).
+  const por = (nome, opts) => { const m = instanciar(nome, opts); if (m) scene.add(m); return Boolean(m); };
   const texParede = { azulejo: tex.azulejo(), marmore: tex.marmore(), concreto: tex.concreto(), oficial: tex.paredeOficial() };
   const texPiso = Object.fromEntries(Object.entries(PISO).map(([k, f]) => [k, f()]));
   const forro = tex.teto();
@@ -99,8 +101,10 @@ export function criarPredio(scene) {
     scene.add(pivo);
     if (eh01) portaCabine01 = pivo;
     const cx = (c.x1 + c.x2) / 2;
-    caixa(scene, { minX: cx - 0.2, maxX: cx + 0.2, minZ: c.z1 + 0.25, maxZ: c.z1 + 0.8 }, 0, 0.42, c.sala === 'banheiro_vip' ? lambert({ color: 0xf0e6c8 }) : loucas);
-    caixa(scene, { minX: cx - 0.25, maxX: cx + 0.25, minZ: c.z1 + 0.02, maxZ: c.z1 + 0.22 }, 0.42, 0.85, loucas);
+    if (!por('toilet', { x: cx, z: c.z1 + 0.45, rot: 0, altura: 0.8 })) {
+      caixa(scene, { minX: cx - 0.2, maxX: cx + 0.2, minZ: c.z1 + 0.25, maxZ: c.z1 + 0.8 }, 0, 0.42, c.sala === 'banheiro_vip' ? lambert({ color: 0xf0e6c8 }) : loucas);
+      caixa(scene, { minX: cx - 0.25, maxX: cx + 0.25, minZ: c.z1 + 0.02, maxZ: c.z1 + 0.22 }, 0.42, 0.85, loucas);
+    }
     placa(scene, String(c.numero).padStart(2, '0'), { x: cx, y: 2.3, z: c.z2 + 0.03 }, 0, { fundo: '#222' }, 0.45);
   }
 
@@ -111,8 +115,31 @@ export function criarPredio(scene) {
     switch (m.tipo) {
       case 'divisoria': caixa(scene, m, 0.15, m.altura, verdeCabine); break;
       case 'guiche': caixa(scene, m, 0, m.altura, madeiraClara); break;
-      case 'mesa': caixa(scene, m, 0.7, m.altura, madeiraClara); caixa(scene, { minX: m.minX + 0.1, maxX: m.minX + 0.2, minZ: m.minZ + 0.1, maxZ: m.minZ + 0.2 }, 0, 0.7, madeiraClara); caixa(scene, { minX: m.maxX - 0.2, maxX: m.maxX - 0.1, minZ: m.maxZ - 0.2, maxZ: m.maxZ - 0.1 }, 0, 0.7, madeiraClara); break;
-      case 'balcao': caixa(scene, m, 0, m.altura, lambert({ color: 0x6a6a64 })); break;
+      case 'mesa':
+        if (m.modelo === 'copa' && por('table', { x: (m.minX + m.maxX) / 2, z: (m.minZ + m.maxZ) / 2, rot: 0, altura: 0.76 })) {
+          por('chair', { x: m.minX + 0.8, z: m.maxZ + 0.45, rot: 0, altura: 0.95 });
+          por('chair', { x: m.maxX - 0.8, z: m.minZ - 0.45, rot: Math.PI, altura: 0.95 });
+          break;
+        }
+        if (m.modelo === 'imprensa' && por('desk', { x: 79.5, z: -8.7, rot: 0, altura: 0.76 })) {
+          por('desk', { x: 82.5, z: -8.7, rot: 0, altura: 0.76 });
+          por('computerScreen', { x: 79.5, z: -8.95, y: 0.76, rot: 0, altura: 0.42 });
+          por('computerKeyboard', { x: 79.5, z: -8.5, y: 0.76, rot: 0, altura: 0.03 });
+          por('computerScreen', { x: 82.5, z: -8.95, y: 0.76, rot: 0, altura: 0.42 });
+          por('chairDesk', { x: 79.5, z: -7.7, rot: Math.PI, altura: 1.0 });
+          por('chairDesk', { x: 82.5, z: -7.6, rot: Math.PI + 0.4, altura: 1.0 });
+          break;
+        }
+        caixa(scene, m, 0.7, m.altura, madeiraClara); caixa(scene, { minX: m.minX + 0.1, maxX: m.minX + 0.2, minZ: m.minZ + 0.1, maxZ: m.minZ + 0.2 }, 0, 0.7, madeiraClara); caixa(scene, { minX: m.maxX - 0.2, maxX: m.maxX - 0.1, minZ: m.maxZ - 0.2, maxZ: m.maxZ - 0.1 }, 0, 0.7, madeiraClara); break;
+      case 'balcao': {
+        const x = (m.minX + m.maxX) / 2;
+        let ok = true;
+        for (let z = m.minZ + 0.45; z < m.maxZ; z += 0.9) ok = por('kitchenCabinet', { x, z, rot: -Math.PI / 2, altura: 0.9 }) && ok;
+        if (!ok) { caixa(scene, m, 0, m.altura, lambert({ color: 0x6a6a64 })); break; }
+        por('kitchenCoffeeMachine', { x, z: m.minZ + 1.35, y: 0.9, rot: -Math.PI / 2, altura: 0.35 });
+        por('kitchenMicrowave', { x, z: m.minZ + 3.15, y: 0.9, rot: -Math.PI / 2, altura: 0.3 });
+        break;
+      }
       case 'tribuna': caixa(scene, m, 0, m.altura, madeira); break;
       case 'prateleira': {
         const metal = lambert({ color: 0x55585a });
@@ -123,6 +150,9 @@ export function criarPredio(scene) {
       case 'cadeiras': {
         const estofado = lambert({ color: 0x2a3a5a });
         for (let x = m.minX + 0.35; x < m.maxX; x += 0.7) {
+          // Cadeira estofada virada para a tribuna (norte).
+          // (o modelo da cadeira olha para -z de fábrica)
+          if (por('chairCushion', { x, z: (m.minZ + m.maxZ) / 2, rot: 0, altura: 0.95 })) continue;
           caixa(scene, { minX: x - 0.28, maxX: x + 0.28, minZ: m.minZ, maxZ: m.maxZ }, 0.4, 0.5, estofado);
           caixa(scene, { minX: x - 0.28, maxX: x + 0.28, minZ: m.maxZ - 0.08, maxZ: m.maxZ }, 0.5, 1.0, estofado);
         }
@@ -135,9 +165,14 @@ export function criarPredio(scene) {
       }
       case 'bomba': caixa(scene, m, 0, m.altura, lambert({ color: 0x5a6a3a })); break;
       case 'bancada': {
-        caixa(scene, m, 0, m.altura, m.ouro ? lambert({ map: tex.marmore() }) : lambert({ color: 0x8a8578 }));
         const x = (m.minX + m.maxX) / 2;
-        for (let z = m.minZ + 0.6; z < m.maxZ - 0.3; z += 1) caixa(scene, { minX: x - 0.18, maxX: x + 0.18, minZ: z - 0.22, maxZ: z + 0.22 }, m.altura, m.altura + 0.05, loucas);
+        const viradaPara = m.espelho === 'oeste' ? -Math.PI / 2 : Math.PI / 2; // as pias olham para dentro do banheiro
+        let pias = !m.ouro;
+        if (pias) for (let z = m.minZ + 0.5; z < m.maxZ - 0.2; z += 1) pias = por('bathroomSink', { x, z, rot: viradaPara, altura: 0.95 }) && pias;
+        if (!pias) {
+          caixa(scene, m, 0, m.altura, m.ouro ? lambert({ map: tex.marmore() }) : lambert({ color: 0x8a8578 }));
+          for (let z = m.minZ + 0.6; z < m.maxZ - 0.3; z += 1) caixa(scene, { minX: x - 0.18, maxX: x + 0.18, minZ: z - 0.22, maxZ: z + 0.22 }, m.altura, m.altura + 0.05, loucas);
+        }
         if (m.ouro) for (let z = m.minZ + 0.6; z < m.maxZ - 0.3; z += 1) caixa(scene, { minX: m.maxX - 0.12, maxX: m.maxX - 0.04, minZ: z - 0.03, maxZ: z + 0.03 }, m.altura, m.altura + 0.25, lambert({ color: 0xd4a017 }));
         const oeste = m.espelho === 'oeste';
         const espelho = new Reflector(new THREE.PlaneGeometry(m.maxZ - m.minZ - 0.2, 1.1), { textureWidth: 768, textureHeight: 288, color: 0x9aa0a0 });
@@ -157,6 +192,9 @@ export function criarPredio(scene) {
       }
     }
   }
+
+  // Decoração (só aparece se o modelo carregou).
+  for (const d of DECORACAO) por(d.modelo, { x: d.x, z: d.z, y: d.y, rot: d.rot, altura: d.altura });
 
   // Ferramentas na prateleira.
   const ferramentas = {};

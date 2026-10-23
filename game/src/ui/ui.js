@@ -271,6 +271,7 @@ export function criarUI(root, { toque = false } = {}) {
           <p class="aviso-parodia">${esc(AVISO_PARODIA)}</p>
           <p class="controles">Fiscal Pavonato · Lulão · Mamãe Falou · Renan Santarém · Ministro Moraez<br>
           Kim Katagiri · Nicolas Ferrer · Seu Jairo · Flávio "Zero Um" · A Faxineira</p>
+          <p class="controles">Móveis 3D: Furniture Kit por Kenney (kenney.nl), licença CC0.</p>
           ${paginasTodas ? '<p><i>Você achou as 8 páginas da prancheta. Na última, escrito à mão: "Amanhã eu volto. Com um projeto sobre pias."</i></p>' : '<p class="controles">Ainda faltam páginas da prancheta escondidas pelo prédio.</p>'}`, 'Continuar', onFim);
       });
     },

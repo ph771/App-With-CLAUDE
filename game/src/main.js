@@ -17,6 +17,7 @@ import { createFiscal } from './logic/fiscal.js';
 import { createInventario } from './logic/inventario.js';
 import { createNoite } from './logic/noite.js';
 import { createFerramentas } from './logic/ferramentas.js';
+import { createFolego, VELOCIDADE_CORRIDA } from './logic/folego.js';
 import { PERGUNTAS, PERGUNTA_FINAL } from './data/perguntas.js';
 import { ITENS } from './data/visitantes.js';
 import { FERRAMENTAS } from './data/noite.js';
@@ -72,6 +73,8 @@ const fiscal = createFiscal({ rota: [], origem: PONTOS.origemFiscal, navegar: pr
 const inventario = createInventario();
 const noite = createNoite({ clock, fiscal, inventario, quiz });
 const ferramentas = createFerramentas();
+const folego = createFolego();
+const OUVE_CORRIDA = 10; // metros: o Fiscal ouve você correndo
 
 // ---------- Personagens e objetos ----------
 const fiscalMesh = criarPersonagem('fiscal');
@@ -110,6 +113,7 @@ let checkpointExtra = null;
 let ultimaPosFiscal = fiscal.posicao();
 let agendados = []; // { em: segundos de jogo, fn } — param na pausa e somem na derrota
 let nivelMedo = 0;
+let shift = false, andouAntes = false, correndo = false;
 
 function agendar(segundos, fn) { agendados.push({ em: segundos, fn }); }
 function rodarAgendados(dt) {
@@ -542,7 +546,9 @@ addEventListener('keydown', (e) => {
   const m = /^Digit([1-8])$/.exec(e.code);
   if (m) usarItem(Number(m[1]) - 1);
 });
-addEventListener('keyup', (e) => { if (e.code === 'KeyE') acaoFim(); });
+addEventListener('keyup', (e) => { if (e.code === 'KeyE') acaoFim(); if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') shift = false; });
+addEventListener('keydown', (e) => { if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') shift = true; });
+addEventListener('blur', () => { shift = false; });
 canvas.addEventListener('click', () => { if (modo === 'jogando') travarMouse(); });
 ui.onItem((i) => { if (modo === 'jogando' && !pausado && !(ui.ocupado() && !perguntaAberta)) usarItem(i); });
 if (controlesToque) {
@@ -584,6 +590,7 @@ function perder() {
     }
     atualizarMao();
     sincronizarPocas();
+    folego.restaurar({ valor: 5, cansado: false });
     aparicao.visible = false; susto = null; apagao = 0; telefoneTocando = 0;
     jogador.teleportar(PONTOS.inicio);
     jogador.olharPara({ x: 0, z: 0 });
@@ -609,8 +616,12 @@ const cacador = { cacando: 0, ronda: PONTOS_RONDA[0] };
 function alvoDoFiscal(pj, minuto, dt) {
   const fp = fiscal.posicao();
   const seguro = minuto < 240 && SALAS_SEGURAS.includes(regiaoDe(pj));
-  const meVe = !seguro && mesmoAndar(fp, pj) && Math.hypot(fp.x - pj.x, fp.z - pj.z) < 9 && temVisao(fp, pj, PAREDES);
+  const distancia = Math.hypot(fp.x - pj.x, fp.z - pj.z);
+  const meVe = !seguro && mesmoAndar(fp, pj) && distancia < 9 && temVisao(fp, pj, PAREDES);
+  // Correr faz barulho: ele ouve e vem, mesmo sem te ver.
+  const meOuve = !seguro && correndo && mesmoAndar(fp, pj) && distancia < OUVE_CORRIDA;
   if (meVe) cacador.cacando = 7;
+  else if (meOuve) cacador.cacando = Math.max(cacador.cacando, 5);
   else cacador.cacando = Math.max(0, cacador.cacando - dt);
   if (cacador.cacando > 0) return pj;
   // Chegou no ponto de ronda (ou é inalcançável): sorteia outro.
@@ -628,8 +639,12 @@ function atualizar(dt, t) {
   if (vendoMonitor > 0) vendoMonitor -= dt;
   const podeMexer = !ocupado && vendoMonitor <= 0;
   if (controlesToque) { const o = controlesToque.consumirOlhar(); if (podeMexer) jogador.girar(o.dx, o.dy); }
-  const vel = (efeitos.leite ? efeitos.leite.velocidade : 1) * ferramentas.multVelocidade();
-  jogador.update(dt, vel, podeMexer);
+  const analogico = controlesToque?.entrada();
+  const querCorrer = (shift || (analogico && Math.hypot(analogico.lado, analogico.frente) > 0.95)) && !segurando && podeMexer;
+  correndo = folego.update(dt, querCorrer, andouAntes);
+  const vel = (efeitos.leite ? efeitos.leite.velocidade : 1) * ferramentas.multVelocidade() * (correndo ? VELOCIDADE_CORRIDA : 1);
+  andouAntes = jogador.update(dt, vel, podeMexer);
+  ui.folego(folego.frac(), folego.cansado());
   atualizarSegurando(dt);
 
   if (perguntaAberta) {
@@ -768,9 +783,10 @@ window.__jogo = {
     modo, pausado, fase: noite.fase(), minuto: clock.minutos(), perguntaAberta: !!perguntaAberta,
     visitantes: visitantes.map((v) => `${v.v.id}:${v.estado}`), itens: inventario.itens(), erros: quiz.erros(),
     relatorio: noite.relatorio(), naMao: ferramentas.naMao(), votos: votos.size, paginas: paginasLidas.size,
-    tarefas: noite.tarefas().map((x) => `${x.id}:${x.feita ? 1 : 0}`), segurando,
+    tarefas: noite.tarefas().map((x) => `${x.id}:${x.feita ? 1 : 0}`), segurando, correndo, folego: folego.frac(),
   }),
   comecar, abrirPergunta, pegarFerramenta, acaoInicio, acaoFim, lerPagina,
+  correr: (v) => { shift = v; },
   proximoAlvo, regiaoDe,
   interagir: () => { const it = interacaoAtual(); if (it?.acao) it.acao(); return it?.texto ?? null; },
   interacao: () => interacaoAtual()?.texto ?? null,

@@ -34,7 +34,7 @@ export function criarJogador(camera, dom, obterParedes, inicio, { entrada } = {}
     onSoltar: (cb) => controles.addEventListener('unlock', cb),
     onTravar: (cb) => controles.addEventListener('lock', cb),
     update(dt, multVel = 1, podeAndar = true) {
-      if (!podeAndar) { apertadas.clear(); return; }
+      if (!podeAndar) { apertadas.clear(); return false; }
       const f = direcao();
       const lado = { x: -f.z, z: f.x };
       let mx = 0, mz = 0;
@@ -56,7 +56,8 @@ export function criarJogador(camera, dom, obterParedes, inicio, { entrada } = {}
         pos = moverComColisao(pos, { x: mx * d, z: mz * d }, obterParedes(), 0.3);
         balanco += dt * 9 * multVel;
       }
-      camera.position.set(pos.x, ALTURA_OLHOS + Math.sin(balanco) * 0.035, pos.z);
+      camera.position.set(pos.x, ALTURA_OLHOS + Math.sin(balanco) * 0.035 * Math.min(multVel, 1.6), pos.z);
+      return n > 0; // andou neste quadro
     },
     // Gira a câmera pelo arrasto do dedo (px).
     girar(dx, dy, sensibilidade = 0.006) {

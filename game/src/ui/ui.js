@@ -21,11 +21,12 @@ export function criarUI(root, { toque = false } = {}) {
     toast: el('div', 'toast oculto'),
     progresso: el('div', 'progresso oculto', '<div class="rotulo"></div><div class="barra"><div></div></div>'),
     carimbo: el('div', 'carimbo oculto'),
+    folego: el('div', 'folego oculto', '<div></div>'),
     flash: el('div', 'flash'),
     escuro: el('div', 'escuro'),
   };
   const hud = el('div', 'oculto');
-  for (const k of ['mira', 'tarefas', 'relogio', 'erros', 'itens', 'dica', 'legenda', 'progresso']) hud.append(camadas[k]);
+  for (const k of ['mira', 'tarefas', 'relogio', 'erros', 'itens', 'dica', 'legenda', 'progresso', 'folego']) hud.append(camadas[k]);
   root.append(hud, camadas.carimbo, camadas.toast, camadas.flash, camadas.escuro, el('div', 'aviso-girar', 'Deite o celular<br>para jogar'));
   let aoTocarItem = null;
   camadas.itens.addEventListener('click', (e) => {
@@ -58,8 +59,8 @@ export function criarUI(root, { toque = false } = {}) {
         <p class="aviso-parodia">${esc(AVISO_PARODIA)}</p>
         <p>Você é o zelador do turno da noite de um banheiro público 24h.<br>Sobreviva até as 06:00.</p>
         <p class="controles">${toque
-          ? 'Analógico à esquerda: andar · Arraste à direita: olhar · Botão amarelo: interagir · Toque nos itens para usar'
-          : 'Mouse: olhar · WASD: andar · E: interagir · 1–8: usar item · Esc: pausar'}<br>
+          ? 'Analógico à esquerda: andar (até a borda: correr) · Arraste à direita: olhar · Botão amarelo: interagir · Toque nos itens para usar'
+          : 'Mouse: olhar · WASD: andar · Shift: correr · E: interagir (segure nas tarefas) · 1–8: usar item · Esc: pausar'}<br>
         Quando o Fiscal perguntar, ${toque ? 'toque na resposta' : 'responda com 1, 2 ou 3'}. <b>Não diga nada com "trans".</b></p>
       `, 'Começar plantão', onJogar);
     },
@@ -88,6 +89,13 @@ export function criarUI(root, { toque = false } = {}) {
     dica(texto) {
       camadas.dica.classList.toggle('oculto', !texto);
       if (texto) camadas.dica.innerHTML = `<b>[E]</b> ${esc(texto)}`;
+    },
+
+    // Barra de fôlego (some quando está cheia).
+    folego(frac, cansado) {
+      camadas.folego.classList.toggle('oculto', frac >= 0.999);
+      camadas.folego.classList.toggle('cansado', cansado);
+      camadas.folego.firstChild.style.width = `${Math.round(frac * 100)}%`;
     },
 
     // Barra de "segurar" (null esconde).

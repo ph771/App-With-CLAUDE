@@ -141,3 +141,9 @@ body.toque .legenda { bottom: 6em; width: calc(100vw - 320px); }
 @keyframes carimbar { from { transform: translate(-50%, -50%) rotate(-8deg) scale(1.8); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .carimbo { animation: none; } }
 body.toque .hud-tarefas { width: min(24em, 42vw); max-height: 60vh; overflow: hidden; }
+
+/* Fôlego da corrida */
+.folego { position: absolute; left: 50%; bottom: 3.2em; transform: translateX(-50%); width: min(14em, 40vw); height: 6px; background: rgba(0,0,0,0.6); border: 1px solid var(--borda); }
+.folego div { height: 100%; background: #9fd3ff; }
+.folego.cansado div { background: var(--perigo); }
+body.toque .folego { bottom: calc(110px + env(safe-area-inset-bottom, 0px)); }

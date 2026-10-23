@@ -32,3 +32,12 @@ test('snapshot e restaurar', () => {
   c.restaurar(s);
   assert.ok(Math.abs(c.minutos() - 90) < 1e-6);
 });
+
+test('pular para a próxima hora', () => {
+  const c = createClock({ segundosPorHora: 240 });
+  for (let i = 0; i < 100; i++) c.tick(0.1);
+  c.pularParaProximaHora();
+  assert.equal(c.formatar(), '01:00');
+  for (let i = 0; i < 20; i++) c.pularParaProximaHora();
+  assert.equal(c.formatar(), '06:00');
+});

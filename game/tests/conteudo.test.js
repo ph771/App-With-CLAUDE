@@ -29,7 +29,7 @@ test('toda fala do Fiscal tem "trans"', () => {
 test('8 visitantes em ordem de horário, ids e itens únicos', () => {
   assert.equal(VISITANTES.length, 8);
   assert.deepEqual(VISITANTES.map((v) => v.id), ['lulao', 'mamae_falou', 'renan', 'moraez', 'kim', 'nicolas', 'jairo', 'flavio']);
-  assert.deepEqual(VISITANTES.map((v) => v.minuto), [0, 60, 120, 150, 180, 240, 270, 300]);
+  assert.deepEqual(VISITANTES.map((v) => v.minuto), [1, 61, 121, 121, 181, 241, 241, 301]);
   assert.deepEqual(VISITANTES.map((v) => v.item), ['lanterna', 'microfone', 'caneca', 'ordem', 'mapa', 'peruca', 'leite', 'chave']);
-  for (const v of VISITANTES) assert.ok(v.falas.length >= 1, v.id);
+  for (const v of VISITANTES) { assert.ok(v.falas.length >= 1, v.id); assert.match(v.voto, /voto/i, v.id); }
 });

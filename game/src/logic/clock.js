@@ -22,6 +22,8 @@ export function createClock({ segundosPorHora }) {
       return `${h}:${m}`;
     },
     terminou: () => minutos + EPS >= MINUTO_FINAL,
+    // Tarefas da hora feitas: vai direto para a próxima hora cheia.
+    pularParaProximaHora() { minutos = Math.min(MINUTO_FINAL, (Math.floor((minutos + EPS) / 60) + 1) * 60); },
     snapshot: () => ({ minutos }),
     restaurar(s) { minutos = s.minutos; },
   };

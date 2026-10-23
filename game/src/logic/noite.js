@@ -1,20 +1,9 @@
-// Agenda da noite: visitantes, sustos, telefone, tarefas e salvamento a cada hora.
+// A noite (Versão B): cada hora tem tarefas. Feitas a tempo = APROVADO no relatório;
+// o tempo da hora acabou com algo pendente = REPROVADO. Às 06:00, entregar o relatório.
 import { VISITANTES } from '../data/visitantes.js';
+import { HORAS, TAREFA_FINAL, SUSTOS, TELEFONEMAS, POCAS_MAX } from '../data/noite.js';
 
-export const SUSTOS = [
-  { minuto: 15, id: 'porta_familia' },
-  { minuto: 65, id: 'fiscal_monitor' },
-  { minuto: 130, id: 'fiscal_cabine' },
-  { minuto: 190, id: 'luz_apaga' },
-  { minuto: 250, id: 'batidas_cabine' },
-  { minuto: 310, id: 'fiscal_espelho' },
-];
-export const TELEFONEMAS = [{ minuto: 20, id: 'telefone_mudo' }];
-export const TAREFAS = [
-  { id: 'repor_papel', texto: 'Repor o papel das cabines' },
-  { id: 'passar_pano', texto: 'Passar pano no chão molhado' },
-  { id: 'conferir_monitor', texto: 'Conferir o monitor do guichê' },
-];
+export { SUSTOS };
 
 const AGENDA = [
   ...VISITANTES.map((v) => ({ chave: `visitante:${v.id}`, minuto: v.minuto, evento: { tipo: 'visitante', visitante: v } })),
@@ -22,21 +11,29 @@ const AGENDA = [
   ...TELEFONEMAS.map((t) => ({ chave: `telefone:${t.id}`, minuto: t.minuto, evento: { tipo: 'telefone', id: t.id } })),
 ].sort((a, b) => a.minuto - b.minuto);
 
-const tarefasNovas = () => TAREFAS.map((t) => ({ ...t, feita: false }));
+const novaTarefa = (t) => ({ ...t, feita: false, progresso: 0 });
 
 export function createNoite({ clock, fiscal, inventario, quiz }) {
   let disparados = new Set();
-  let ultimaHora = -1;
-  let tarefas = tarefasNovas();
+  let horaAtual = -1;
+  let tarefas = [];
+  let relatorio = Array(6).fill(null);
   let fase = 'jogando';
   let checkpoint = null;
+  let contadorPoca = 0;
+
+  function prepararHora(h) {
+    tarefas = h >= 6 ? [novaTarefa(TAREFA_FINAL)] : HORAS[h].map(novaTarefa);
+  }
 
   function salvarCheckpoint() {
     checkpoint = {
       clock: clock.snapshot(), fiscal: fiscal.snapshot(), inventario: inventario.snapshot(),
-      disparados: new Set(disparados), ultimaHora,
+      disparados: new Set(disparados), horaAtual, relatorio: [...relatorio],
     };
   }
+
+  const pendente = () => tarefas.some((t) => !t.feita);
 
   return {
     update() {
@@ -46,10 +43,16 @@ export function createNoite({ clock, fiscal, inventario, quiz }) {
 
       const eventos = [];
       const hora = clock.hora();
-      if (hora !== ultimaHora) {
-        ultimaHora = hora;
-        tarefas = tarefasNovas();
+      if (hora !== horaAtual) {
+        // A hora anterior acabou pelo tempo, com tarefa pendente.
+        if (horaAtual >= 0 && horaAtual < 6 && relatorio[horaAtual] === null) {
+          relatorio[horaAtual] = 'reprovado';
+          eventos.push({ tipo: 'hora_concluida', hora: horaAtual, aprovado: false });
+        }
+        horaAtual = hora;
+        prepararHora(hora);
         quiz.zerarErros();
+        salvarCheckpoint();
         eventos.push({ tipo: 'hora', hora });
       }
       const minuto = clock.minutos();
@@ -59,18 +62,44 @@ export function createNoite({ clock, fiscal, inventario, quiz }) {
         disparados.add(item.chave);
         eventos.push(item.evento);
       }
-      // O checkpoint é salvo depois dos eventos do minuto exato da virada,
-      // então quem entra às XX:00 entra de novo ao voltar.
-      if (eventos.some((e) => e.tipo === 'hora')) {
-        const daVirada = eventos.filter((e) => e.tipo !== 'hora').map((e) => AGENDA.find((a) => a.evento === e).chave);
-        salvarCheckpoint();
-        daVirada.forEach((k) => checkpoint.disparados.delete(k));
+      if (hora < 6 && relatorio[hora] === null && !pendente()) {
+        relatorio[hora] = 'aprovado';
+        eventos.push({ tipo: 'hora_concluida', hora, aprovado: true });
       }
       if (fase === 'jogando' && clock.terminou()) fase = 'final';
       return eventos;
     },
+
+    // Depois da transição na tela: pula para a próxima hora; o que sobrou desta hora não acontece mais.
+    avancarHora() {
+      const fim = (horaAtual + 1) * 60;
+      for (const item of AGENDA) if (item.minuto < fim) disparados.add(item.chave);
+      clock.pularParaProximaHora();
+    },
+
     tarefas: () => tarefas.map((t) => ({ ...t })),
-    concluirTarefa(id) { const t = tarefas.find((x) => x.id === id); if (t) t.feita = true; },
+    progredir(id, dt) {
+      const t = tarefas.find((x) => x.id === id);
+      if (!t || t.feita) return { feita: Boolean(t?.feita), frac: 1 };
+      t.progresso = Math.min(t.segundos, t.progresso + dt);
+      t.feita = t.progresso >= t.segundos - 1e-9;
+      return { feita: t.feita, frac: t.progresso / t.segundos };
+    },
+    concluirTarefa(id) { const t = tarefas.find((x) => x.id === id); if (t) { t.feita = true; t.progresso = t.segundos; } },
+
+    // O Fiscal deixa poças a partir das 02:00 (no máximo POCAS_MAX abertas).
+    adicionarPoca(ponto) {
+      if (horaAtual < 2 || horaAtual >= 6 || relatorio[horaAtual] !== null) return false;
+      if (tarefas.filter((t) => t.poca && !t.feita).length >= POCAS_MAX) return false;
+      contadorPoca++;
+      tarefas.push(novaTarefa({
+        id: `poca_${contadorPoca}`, texto: 'Limpar a poça que o Fiscal deixou', onde: 'Siga as pegadas',
+        ferramenta: 'esfregao', ponto: { ...ponto }, segundos: 2, poca: true,
+      }));
+      return true;
+    },
+
+    relatorio: () => [...relatorio],
     salvarCheckpoint,
     voltarCheckpoint() {
       if (!checkpoint) return;
@@ -78,13 +107,18 @@ export function createNoite({ clock, fiscal, inventario, quiz }) {
       fiscal.restaurar(checkpoint.fiscal);
       inventario.restaurar(checkpoint.inventario);
       disparados = new Set(checkpoint.disparados);
-      ultimaHora = checkpoint.ultimaHora;
-      tarefas = tarefasNovas();
+      horaAtual = checkpoint.horaAtual;
+      relatorio = [...checkpoint.relatorio];
+      prepararHora(horaAtual);
       quiz.pular();
       quiz.zerarErros();
       fase = clock.terminou() ? 'final' : 'jogando';
     },
-    vencer() { fase = 'vitoria'; },
+    // Fim da noite: devolve o resultado da votação.
+    vencer() {
+      fase = 'vitoria';
+      return relatorio.every((r) => r === 'aprovado') ? 'arquivado' : 'aprovado_pl';
+    },
     fase: () => fase,
   };
 }

@@ -3,8 +3,8 @@
 # Uso: bash game/tools/publicar-pwa.sh "mensagem da versão"
 set -euo pipefail
 RAIZ="$(cd "$(dirname "$0")/../.." && pwd)"
-PUBLICO="${PUBLICO:-$RAIZ/../plantao-no-banheiro}"
-REPO_URL="${REPO_URL:-https://github.com/ph771/plantao-no-banheiro.git}"
+PUBLICO="${PUBLICO:-$RAIZ/../plant-o-no-banheiro}"
+REPO_URL="${REPO_URL:-https://github.com/ph771/plant-o-no-banheiro.git}"
 MENSAGEM="${1:-Nova versão}"
 
 node "$RAIZ/game/tools/build-pwa.mjs"
@@ -23,7 +23,7 @@ cat > README.md <<LEIAME
 
 Paródia de terror e comédia em 1ª pessoa. **Personagens inventados. Qualquer semelhança é piada.**
 
-Jogue e instale: https://ph771.github.io/plantao-no-banheiro/
+Jogue e instale: https://ph771.github.io/plant-o-no-banheiro/
 
 - No PC (Chrome/Edge): botão **Instalar jogo** na tela inicial (ou o ícone de instalar na barra de endereço).
 - No Android: menu do navegador → **Instalar app**.
@@ -36,7 +36,8 @@ Versão atual: \`$VERSAO\`
 Créditos: móveis 3D — Furniture Kit por Kenney (CC0); Three.js (MIT).
 LEIAME
 git add -A
-git commit -q -m "$MENSAGEM ($VERSAO)" || { echo "Nada mudou."; exit 0; }
+git commit -q -m "$MENSAGEM ($VERSAO)" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01N3tKgYCVcct9w1KXskeVv6" || { echo "Nada mudou."; exit 0; }
 for espera in 2 4 8 16; do
   git push -u origin main && break
   echo "Falha no envio; tentando de novo em ${espera}s"; sleep "$espera"

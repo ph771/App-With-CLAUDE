@@ -1,0 +1,6 @@
+:root { --fundo: #000; --texto: #f2efe6; --destaque: #e8c547; --perigo: #d83b3b; }
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--fundo); overflow: hidden; }
+body { display: grid; place-items: center; font-family: "Courier New", monospace; color: var(--texto); }
+#tela { display: block; }
+#ui { position: fixed; inset: 0; pointer-events: none; }

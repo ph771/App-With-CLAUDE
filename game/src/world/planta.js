@@ -45,7 +45,7 @@ export const BANCADAS = {
 };
 export const GUICHE = { minX: -4, maxX: -2.8, minZ: 2, maxZ: 4.5 };
 
-export const PAREDES = [
+export const PAREDES_SALA = [
   // hall
   pz(-4, 0, 6), pz(4, 0, 6), px(6, -4, 4),
   // corredor: parede norte com as portas dos banheiros (a do banheiro família é trancada)
@@ -61,9 +61,11 @@ export const PAREDES = [
   pz(-2, -6, -2), pz(2, -6, -2), px(-6, -2, 2),
   // depósito
   pz(16, -4, 1), px(-4, 12, 16), px(1, 12, 16),
-  ...divisorias,
-  BANCADAS.masculino, BANCADAS.feminino, GUICHE,
 ];
+export const DIVISORIAS = divisorias;
+
+// Tudo que colide com o jogador.
+export const PAREDES = [...PAREDES_SALA, ...DIVISORIAS, BANCADAS.masculino, BANCADAS.feminino, GUICHE];
 
 export const PONTOS = {
   inicio: { x: 0, z: 3.5 },

@@ -1,10 +1,8 @@
-// O que aparece no lugar de cada tarefa: um marcador amarelo (losango flutuando + círculo no chão)
-// e o "problema" em si (pegadas molhadas, privada vazando, porta-papel vazio...).
+// O que aparece no lugar de cada tarefa: o "problema" em si
+// (pegadas molhadas, privada vazando, porta-sabonete vazio, poeira na tribuna...).
 import * as THREE from 'three';
 import { criarPoca } from './objetos.js';
 
-const AMARELO = 0xffd23a;
-const basico = (color, extra = {}) => new THREE.MeshBasicMaterial({ color, fog: false, ...extra });
 const lambert = (color, extra = {}) => new THREE.MeshLambertMaterial({ color, flatShading: true, ...extra });
 
 function pegadas(g) {
@@ -44,22 +42,12 @@ function problema(g, t) {
   }
 }
 
+// Só o "problema" desenhado no lugar da tarefa (sem marcador: o jogador procura pelo relatório).
 export function criarMarcador(t) {
   const g = new THREE.Group();
   g.position.set(t.ponto.x, 0, t.ponto.z);
   problema(g, t);
-  const anel = new THREE.Mesh(new THREE.RingGeometry(0.5, 0.62, 24), basico(AMARELO, { transparent: true, opacity: 0.55, side: THREE.DoubleSide, depthWrite: false }));
-  anel.rotation.x = -Math.PI / 2; anel.position.y = 0.02;
-  const losango = new THREE.Mesh(new THREE.OctahedronGeometry(0.11), basico(AMARELO));
-  losango.position.y = 2.2;
-  g.add(anel, losango);
-  g.userData = { anel, losango };
   return g;
 }
 
-// Anima: losango gira e flutua, círculo pulsa.
-export function animarMarcador(g, t) {
-  g.userData.losango.rotation.y = t * 2;
-  g.userData.losango.position.y = 2.2 + Math.sin(t * 3) * 0.08;
-  g.userData.anel.material.opacity = 0.35 + 0.25 * (0.5 + 0.5 * Math.sin(t * 4));
-}
+export function animarMarcador() { /* nada para animar */ }

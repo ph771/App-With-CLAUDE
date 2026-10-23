@@ -175,14 +175,15 @@ export const PONTOS = {
   guiche: { x: -5.9, z: 4.8 },
   monitor: { x: -7.6, z: 5.2 },
   telefone: { x: -7.6, z: 3.6 },
-  origemFiscal: { x: 118.5, z: -1.5 },
+  // O Fiscal começa na ponta oeste do corredor dos gabinetes (longe do banheiro VIP, tarefa das 02:00).
+  origemFiscal: { x: 79.5, z: -1.8 },
   quadroGeral: { x: 213, z: -9 },
   painel: { x: 100, z: -16.6 },
-  cameraMonitor: { x: 94, y: 2.7, z: -1.5, olharX: 119, olharZ: -1.5 },
+  cameraMonitor: { x: 104, y: 2.7, z: -1.5, olharX: 78, olharZ: -1.5 },
   portaAlmox: { x: -18.8, z: -1.5 },
   // Onde o Fiscal recomeça depois de uma pergunta: sempre num andar diferente do seu.
   recomecoTerreo: { x: 18, z: -1.5 },
-  recomeco1andar: { x: 118.5, z: -1.5 },
+  recomeco1andar: { x: 79.5, z: -1.8 },
 };
 
 // Onde ficam as ferramentas no almoxarifado (pegar com E).

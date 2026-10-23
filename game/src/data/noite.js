@@ -22,7 +22,6 @@ export const HORAS = [
   ],
   [
     t('sabonete_masc_t', 'Repor sabonete', 'Banheiro masculino · térreo', 'sabonete', { x: -11, z: -7 }, 2),
-    t('sabonete_fem_t', 'Repor sabonete', 'Banheiro feminino · térreo', 'sabonete', { x: 11, z: -7 }, 2),
     t('sabonete_vip', 'Repor sabonete', 'Banheiro dos Parlamentares · 1º andar', 'sabonete', { x: 122.8, z: -7 }, 2),
   ],
   [

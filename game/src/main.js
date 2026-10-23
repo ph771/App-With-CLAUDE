@@ -31,7 +31,7 @@ const SEM_TRAVA = params.has('semtrava'); // testes automáticos: não pausa sem
 const TOQUE = params.has('toque') || matchMedia('(pointer: coarse)').matches;
 if (TOQUE) document.body.classList.add('toque');
 // Duração máxima de cada hora (segundos reais). ?rapido=1 para testes.
-const SEGUNDOS_POR_HORA = Number(params.get('seghora')) || (params.has('rapido') ? 40 : 240);
+const SEGUNDOS_POR_HORA = Number(params.get('seghora')) || (params.has('rapido') ? 40 : 270);
 const POCA_A_CADA = 40; // segundos andando entre uma poça e outra do Fiscal
 const SALAS_SEGURAS = ['almox', 'hall_s', 'maquinas']; // o Fiscal não entra antes das 04:00
 
@@ -354,7 +354,7 @@ function fecharPergunta(segura) {
     agendar(1.8, () => { if (!perguntaAberta) abrirPergunta(true); });
     return;
   }
-  if (!final) { fiscal.voltarParaOrigem(pontoDeRecomeco()); fiscal.pausar(3); fiscal.tregua(15); }
+  if (!final) { fiscal.voltarParaOrigem(pontoDeRecomeco()); fiscal.pausar(3); fiscal.tregua(15); cacador.cacando = 0; }
 }
 
 // Depois de uma pergunta o Fiscal recomeça em outro andar (precisa da escada para te achar).
@@ -600,11 +600,23 @@ let anterior = performance.now();
 let quadro = 0;
 let tempoHud = 0;
 
-function alvoDoFiscal(pj, minuto) {
-  // Antes das 04:00 o almoxarifado e o subsolo são seguros: ele vai fazer ronda lá em cima
-  // (esperar na porta do almoxarifado era uma armadilha, porque você passa por ali toda hora).
-  if (minuto < 240 && SALAS_SEGURAS.includes(regiaoDe(pj))) return PONTOS.recomeco1andar;
-  return pj;
+// Ronda: o Fiscal anda de sala em sala. Caça: quando te enxerga, vem atrás por 12 s.
+const PONTOS_RONDA = SALAS.filter((s) => !s.fechada && !SALAS_SEGURAS.includes(s.id))
+  .map((s) => ({ x: (s.minX + s.maxX) / 2, z: (s.minZ + s.maxZ) / 2 }));
+const cacador = { cacando: 0, ronda: PONTOS_RONDA[0] };
+
+function alvoDoFiscal(pj, minuto, dt) {
+  const fp = fiscal.posicao();
+  const seguro = minuto < 240 && SALAS_SEGURAS.includes(regiaoDe(pj));
+  const meVe = !seguro && mesmoAndar(fp, pj) && Math.hypot(fp.x - pj.x, fp.z - pj.z) < 12 && temVisao(fp, pj, PAREDES);
+  if (meVe) cacador.cacando = 12;
+  else cacador.cacando = Math.max(0, cacador.cacando - dt);
+  if (cacador.cacando > 0) return pj;
+  // Chegou no ponto de ronda (ou é inalcançável): sorteia outro.
+  if (Math.hypot(fp.x - cacador.ronda.x, fp.z - cacador.ronda.z) < 0.8) {
+    cacador.ronda = PONTOS_RONDA[Math.floor(Math.random() * PONTOS_RONDA.length)];
+  }
+  return cacador.ronda;
 }
 
 function atualizar(dt, t) {
@@ -638,7 +650,7 @@ function atualizar(dt, t) {
     const fp = fiscal.posicao();
     const pelaCamera = vendoMonitor > 0 && ['corredor_1', 'hall_1'].includes(regiaoDe(fp));
     const olhando = pelaCamera || (mesmoAndar(pj, fp) && jogador.olhandoPara(fp, paredesAtuais()));
-    const r = fiscal.update(dt, { minuto, jogador: pj, alvo: alvoDoFiscal(pj, minuto), olhando });
+    const r = fiscal.update(dt, { minuto, jogador: pj, alvo: alvoDoFiscal(pj, minuto, dt), olhando });
     if (r === 'alcancou' && fiscal.visivel(minuto)) abrirPergunta(false);
   }
   const fp = fiscal.posicao();

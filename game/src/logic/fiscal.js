@@ -1,11 +1,12 @@
 // O Fiscal Pavonato: só anda quando o jogador não está olhando.
-export const DISTANCIA_ALCANCE = 1.5;
+// 1,1 m: dá para passar rente à parede de um corredor de 3 m sem ser pego.
+export const DISTANCIA_ALCANCE = 1.1;
 const ESPERA_DISTRACAO = 5;
 
 export function velocidadeBase(minuto) {
-  if (minuto >= 300) return 1.2;
-  if (minuto >= 240) return 0.9;
-  if (minuto >= 120) return 0.5;
+  if (minuto >= 300) return 1.0;
+  if (minuto >= 240) return 0.75;
+  if (minuto >= 120) return 0.45;
   return 0;
 }
 
@@ -17,7 +18,7 @@ export function createFiscal({ rota, origem, navegar = (_p, alvo) => alvo }) {
   function inicial() {
     return {
       pos: { ...origem }, indice: 0, mult: 1, horaMult: null,
-      suspenso: 0, pausado: 0, distracao: null, esperaDistracao: 0,
+      suspenso: 0, pausado: 0, tregua: 0, distracao: null, esperaDistracao: 0,
     };
   }
 
@@ -53,7 +54,9 @@ export function createFiscal({ rota, origem, navegar = (_p, alvo) => alvo }) {
       const vel = velocidadeBase(minuto) * s.mult;
       if (vel === 0) return null;
       if (s.pausado > 0) { s.pausado = Math.max(0, s.pausado - dt); return null; }
-      if (dist(s.pos, jogador) < DISTANCIA_ALCANCE) return 'alcancou';
+      if (s.tregua > 0) s.tregua = Math.max(0, s.tregua - dt);
+      const pega = () => s.tregua <= 0 && dist(s.pos, jogador) < DISTANCIA_ALCANCE;
+      if (pega()) return 'alcancou';
 
       if (s.distracao) {
         if (dist(s.pos, s.distracao) > 1e-9) { if (!olhando) andarAte(s.distracao, vel * dt); return null; }
@@ -69,7 +72,7 @@ export function createFiscal({ rota, origem, navegar = (_p, alvo) => alvo }) {
         if (dist(s.pos, rota[s.indice]) < 1e-9) s.indice++;
       }
       if (d > 1e-12) andarAte(alvo ?? jogador, d);
-      return dist(s.pos, jogador) < DISTANCIA_ALCANCE ? 'alcancou' : null;
+      return pega() ? 'alcancou' : null;
     },
     posicao: () => ({ ...s.pos }),
     visivel: (minuto) => minuto >= 60 && s.suspenso <= 0,
@@ -77,6 +80,8 @@ export function createFiscal({ rota, origem, navegar = (_p, alvo) => alvo }) {
     voltarParaOrigem(ponto = origem) { s.pos = { ...ponto }; s.indice = 0; s.distracao = null; },
     suspender(seg) { s.suspenso = seg; },
     pausar(seg) { s.pausado = seg; },
+    // Trégua: ele anda, mas não te pega (depois de uma pergunta).
+    tregua(seg) { s.tregua = seg; },
     distrair(ponto) { s.distracao = { ...ponto }; s.esperaDistracao = ESPERA_DISTRACAO; },
     errou() { s.mult *= 1.15; if (s.horaMult === null) s.horaMult = -1; },
     snapshot: () => structuredClone(s),

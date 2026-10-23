@@ -354,7 +354,7 @@ function fecharPergunta(segura) {
     agendar(1.8, () => { if (!perguntaAberta) abrirPergunta(true); });
     return;
   }
-  if (!final) { fiscal.voltarParaOrigem(pontoDeRecomeco()); fiscal.pausar(3); }
+  if (!final) { fiscal.voltarParaOrigem(pontoDeRecomeco()); fiscal.pausar(3); fiscal.tregua(15); }
 }
 
 // Depois de uma pergunta o Fiscal recomeça em outro andar (precisa da escada para te achar).

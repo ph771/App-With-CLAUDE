@@ -601,8 +601,9 @@ let quadro = 0;
 let tempoHud = 0;
 
 function alvoDoFiscal(pj, minuto) {
-  // Antes das 04:00 o almoxarifado e o subsolo são seguros: ele espera na porta.
-  if (minuto < 240 && SALAS_SEGURAS.includes(regiaoDe(pj))) return PONTOS.portaAlmox;
+  // Antes das 04:00 o almoxarifado e o subsolo são seguros: ele vai fazer ronda lá em cima
+  // (esperar na porta do almoxarifado era uma armadilha, porque você passa por ali toda hora).
+  if (minuto < 240 && SALAS_SEGURAS.includes(regiaoDe(pj))) return PONTOS.recomeco1andar;
   return pj;
 }
 
@@ -757,7 +758,7 @@ window.__jogo = {
     tarefas: noite.tarefas().map((x) => `${x.id}:${x.feita ? 1 : 0}`), segurando,
   }),
   comecar, abrirPergunta, pegarFerramenta, acaoInicio, acaoFim, lerPagina,
-  proximoAlvo,
+  proximoAlvo, regiaoDe,
   interagir: () => { const it = interacaoAtual(); if (it?.acao) it.acao(); return it?.texto ?? null; },
   interacao: () => interacaoAtual()?.texto ?? null,
   teleportar: (x, z) => jogador.teleportar({ x, z }),

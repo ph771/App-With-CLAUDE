@@ -1,4 +1,5 @@
 :root {
+  color-scheme: dark;
   --fundo: #000; --texto: #f2efe6; --apagado: #a8a497; --destaque: #e8c547; --perigo: #e04848;
   --caixa: rgba(8, 10, 9, 0.86); --borda: #5d6b5f;
   --fonte: "VT323", "Courier New", monospace;

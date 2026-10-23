@@ -1,6 +1,66 @@
-:root { --fundo: #000; --texto: #f2efe6; --destaque: #e8c547; --perigo: #d83b3b; }
+:root {
+  --fundo: #000; --texto: #f2efe6; --apagado: #a8a497; --destaque: #e8c547; --perigo: #e04848;
+  --caixa: rgba(8, 10, 9, 0.86); --borda: #5d6b5f;
+  --fonte: "VT323", "Courier New", monospace;
+}
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; background: var(--fundo); overflow: hidden; }
-body { display: grid; place-items: center; font-family: "Courier New", monospace; color: var(--texto); }
+body { display: grid; place-items: center; font-family: var(--fonte); color: var(--texto); }
 #tela { display: block; }
-#ui { position: fixed; inset: 0; pointer-events: none; }
+#ui { position: fixed; inset: 0; pointer-events: none; font-size: clamp(18px, 2.6vh, 30px); }
+#ui button { pointer-events: auto; font: inherit; cursor: pointer; }
+.oculto { display: none !important; }
+
+/* Telas cheias (início, derrota, final) */
+.tela-cheia {
+  position: absolute; inset: 0; display: grid; place-items: center; text-align: center;
+  background: rgba(0, 0, 0, 0.88); pointer-events: auto; padding: 16px;
+}
+.tela-cheia .conteudo { max-width: 46em; }
+.tela-cheia h1 { font-size: 2.6em; margin: 0 0 0.1em; color: var(--destaque); letter-spacing: 0.06em; text-shadow: 3px 3px 0 #5a1010; }
+.tela-cheia h2 { font-size: 1.1em; margin: 0 0 1em; color: var(--apagado); font-weight: normal; }
+.tela-cheia p { line-height: 1.25; margin: 0.6em 0; }
+.aviso-parodia { border: 2px solid var(--destaque); padding: 0.4em 0.8em; color: var(--destaque); display: inline-block; }
+.controles { color: var(--apagado); font-size: 0.85em; }
+.botao {
+  margin-top: 1em; padding: 0.3em 1.2em; background: #1c2a20; color: var(--texto);
+  border: 2px solid var(--destaque); font-size: 1.2em;
+}
+.botao:hover, .botao:focus-visible { background: #2c4030; outline: none; }
+
+/* HUD */
+.hud-relogio { position: absolute; top: 12px; right: 16px; font-size: 2em; color: #ff5a3a; text-shadow: 0 0 6px #a01010; }
+.hud-tarefas { position: absolute; top: 12px; left: 16px; font-size: 0.9em; line-height: 1.15; background: var(--caixa); padding: 6px 10px; border-left: 3px solid var(--borda); }
+.hud-tarefas .feita { color: var(--apagado); text-decoration: line-through; }
+.hud-erros { position: absolute; top: 3.6em; right: 16px; color: var(--perigo); letter-spacing: 0.2em; font-size: 1.2em; }
+.hud-erros .vazio { color: #3a3a3a; }
+.hud-itens { position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; max-width: 96vw; }
+.item { background: var(--caixa); border: 2px solid var(--borda); padding: 2px 8px; font-size: 0.85em; white-space: nowrap; }
+.item b { color: var(--destaque); }
+.mira { position: absolute; left: 50%; top: 50%; width: 4px; height: 4px; margin: -2px; background: rgba(255,255,255,0.6); }
+.dica { position: absolute; left: 50%; bottom: 4.2em; transform: translateX(-50%); background: var(--caixa); padding: 2px 12px; border: 1px solid var(--borda); }
+.dica b { color: var(--destaque); }
+.toast { position: absolute; top: 18%; left: 50%; transform: translateX(-50%); background: var(--caixa); padding: 6px 16px; border: 2px solid var(--destaque); text-align: center; max-width: 90vw; }
+.legenda { position: absolute; bottom: 7.5em; left: 50%; transform: translateX(-50%); width: min(90vw, 40em); text-align: center; text-shadow: 2px 2px 0 #000; }
+.legenda b { color: var(--destaque); }
+
+/* Diálogo dos visitantes */
+.dialogo { position: absolute; left: 50%; bottom: 3.6em; transform: translateX(-50%); width: min(92vw, 42em); background: var(--caixa); border: 2px solid var(--borda); padding: 10px 16px 8px; }
+.dialogo .nome { color: var(--destaque); font-size: 1.1em; }
+.dialogo .texto { min-height: 3.6em; line-height: 1.2; }
+.dialogo .seguir { text-align: right; color: var(--apagado); font-size: 0.8em; }
+
+/* Pergunta do Fiscal */
+.pergunta { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(92vw, 40em); background: rgba(20, 4, 4, 0.92); border: 3px solid var(--perigo); padding: 12px 18px; }
+.pergunta .nome { color: var(--perigo); font-size: 1.1em; }
+.pergunta .fala { font-size: 1.3em; margin: 0.3em 0 0.6em; line-height: 1.15; }
+.pergunta .respostas { display: grid; gap: 6px; }
+.pergunta .respostas button { text-align: left; background: #1d0d0d; color: var(--texto); border: 2px solid #6a2a2a; padding: 4px 10px; }
+.pergunta .respostas button:hover { border-color: var(--destaque); }
+.pergunta .barra { height: 8px; background: #3a1010; margin-top: 10px; }
+.pergunta .barra div { height: 100%; background: var(--perigo); }
+
+.flash { position: absolute; inset: 0; background: #fff; opacity: 0; transition: opacity 0.6s; }
+.flash.ativo { opacity: 0.85; transition: none; }
+.escuro { position: absolute; inset: 0; background: #000; opacity: 0; transition: opacity 1.5s; }
+.escuro.ativo { opacity: 1; }

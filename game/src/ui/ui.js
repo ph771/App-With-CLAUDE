@@ -1,0 +1,166 @@
+// Interface em HTML por cima do jogo.
+export const AVISO_PARODIA = 'Paródia de ficção. Personagens inventados. Qualquer semelhança é piada.';
+
+const el = (tag, classe, html = '') => {
+  const e = document.createElement(tag);
+  if (classe) e.className = classe;
+  e.innerHTML = html;
+  return e;
+};
+const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+export function criarUI(root) {
+  const camadas = {
+    mira: el('div', 'mira'),
+    tarefas: el('div', 'hud-tarefas'),
+    relogio: el('div', 'hud-relogio'),
+    erros: el('div', 'hud-erros'),
+    itens: el('div', 'hud-itens'),
+    dica: el('div', 'dica oculto'),
+    legenda: el('div', 'legenda oculto'),
+    toast: el('div', 'toast oculto'),
+    flash: el('div', 'flash'),
+    escuro: el('div', 'escuro'),
+  };
+  const hud = el('div', 'oculto');
+  for (const k of ['mira', 'tarefas', 'relogio', 'erros', 'itens', 'dica', 'legenda']) hud.append(camadas[k]);
+  root.append(hud, camadas.toast, camadas.flash, camadas.escuro);
+
+  let modal = null; // diálogo ou pergunta aberta
+  let timerToast = null, timerLegenda = null;
+
+  function telaCheia(html, botao, onClick) {
+    const t = el('div', 'tela-cheia', `<div class="conteudo">${html}</div>`);
+    if (botao) {
+      const b = el('button', 'botao', esc(botao));
+      b.addEventListener('click', () => { t.remove(); onClick(); });
+      t.querySelector('.conteudo').append(b);
+      setTimeout(() => b.focus(), 50);
+    }
+    root.append(t);
+    return t;
+  }
+
+  return {
+    ocupado: () => modal !== null,
+
+    telaInicial(onJogar) {
+      telaCheia(`
+        <h1>PLANTÃO NO BANHEIRO</h1>
+        <h2>Episódio 1 — A Ronda do Fiscal</h2>
+        <p class="aviso-parodia">${esc(AVISO_PARODIA)}</p>
+        <p>Você é o zelador do turno da noite de um banheiro público 24h.<br>Sobreviva até as 06:00.</p>
+        <p class="controles">Mouse: olhar · WASD: andar · E: interagir · 1–8: usar item · Esc: pausar<br>
+        Quando o Fiscal perguntar, responda com 1, 2 ou 3. <b>Não diga nada com "trans".</b></p>
+      `, 'Começar plantão', onJogar);
+    },
+
+    mostrarHud(v) { hud.classList.toggle('oculto', !v); },
+
+    hud({ relogio, itens, tarefas, erros }) {
+      camadas.relogio.textContent = relogio;
+      camadas.tarefas.innerHTML = tarefas.map((t) => `<div class="${t.feita ? 'feita' : ''}">${t.feita ? '■' : '□'} ${esc(t.texto)}</div>`).join('');
+      camadas.erros.innerHTML = [0, 1, 2].map((i) => `<span class="${i < erros ? '' : 'vazio'}">✕</span>`).join('');
+      camadas.itens.innerHTML = itens.map((it) => `<div class="item"><b>${it.tecla}</b> ${esc(it.nome)}</div>`).join('');
+    },
+
+    dica(texto) {
+      camadas.dica.classList.toggle('oculto', !texto);
+      if (texto) camadas.dica.innerHTML = `<b>[E]</b> ${esc(texto)}`;
+    },
+
+    aviso(texto, segundos = 2.5) {
+      camadas.toast.textContent = texto;
+      camadas.toast.classList.remove('oculto');
+      clearTimeout(timerToast);
+      timerToast = setTimeout(() => camadas.toast.classList.add('oculto'), segundos * 1000);
+    },
+
+    legenda(nome, texto, segundos = 4) {
+      camadas.legenda.innerHTML = nome ? `<b>${esc(nome)}:</b> ${esc(texto)}` : esc(texto);
+      camadas.legenda.classList.remove('oculto');
+      clearTimeout(timerLegenda);
+      timerLegenda = setTimeout(() => camadas.legenda.classList.add('oculto'), segundos * 1000);
+    },
+
+    flash() {
+      camadas.flash.classList.add('ativo');
+      requestAnimationFrame(() => requestAnimationFrame(() => camadas.flash.classList.remove('ativo')));
+    },
+    escurecer(v) { camadas.escuro.classList.toggle('ativo', v); },
+
+    // Diálogo: avança com E, Espaço ou clique.
+    dialogo(nome, falas, onFim) {
+      let i = 0;
+      const caixa = el('div', 'dialogo', `<div class="nome">${esc(nome)}</div><div class="texto"></div><div class="seguir">[E] continuar</div>`);
+      const mostrar = () => { caixa.querySelector('.texto').textContent = falas[i]; };
+      const avancar = () => {
+        i++;
+        if (i < falas.length) { mostrar(); return; }
+        caixa.remove(); modal = null; onFim?.();
+      };
+      modal = { tecla(code) { if (code === 'KeyE' || code === 'Space' || code === 'Enter') avancar(); } };
+      caixa.addEventListener('click', avancar);
+      caixa.style.pointerEvents = 'auto';
+      mostrar();
+      hud.append(caixa);
+    },
+
+    // Pergunta do Fiscal: teclas 1, 2, 3 (ou clique). Devolve controles da barra de tempo.
+    pergunta({ fala, respostas }, onEscolha) {
+      const caixa = el('div', 'pergunta', `
+        <div class="nome">FISCAL PAVONATO</div>
+        <div class="fala">${esc(fala)}</div>
+        <div class="respostas">${respostas.map((r, i) => `<button data-i="${i}"><b>${i + 1}.</b> ${esc(r)}</button>`).join('')}</div>
+        <div class="barra"><div style="width:100%"></div></div>`);
+      const fechar = () => { caixa.remove(); if (modal?.pergunta) modal = null; };
+      const escolher = (i) => { fechar(); onEscolha(i); };
+      caixa.querySelectorAll('button').forEach((b) => b.addEventListener('click', () => escolher(Number(b.dataset.i))));
+      modal = {
+        pergunta: true,
+        tecla(code) { const n = { Digit1: 0, Digit2: 1, Digit3: 2, Numpad1: 0, Numpad2: 1, Numpad3: 2 }[code]; if (n !== undefined) escolher(n); },
+      };
+      root.append(caixa);
+      return {
+        tempo(frac) { caixa.querySelector('.barra div').style.width = `${Math.max(0, frac) * 100}%`; },
+        fechar,
+      };
+    },
+
+    tecla(code) { if (modal) { modal.tecla(code); return true; } return false; },
+
+    pausa(mostrar) {
+      root.querySelector('.tela-pausa')?.remove();
+      if (mostrar) {
+        const t = el('div', 'tela-cheia tela-pausa', '<div class="conteudo"><h1>PAUSADO</h1><p>Clique para continuar o plantão.</p></div>');
+        t.style.pointerEvents = 'none';
+        root.append(t);
+      }
+    },
+
+    derrota(hora, onTentar) {
+      telaCheia(`<h1 style="color:var(--perigo)">O FISCAL TE PEGOU</h1>
+        <p>Três respostas erradas. Ele anotou tudo na prancheta.</p>`, `Voltar para ${hora}`, onTentar);
+    },
+
+    vitoria(onFim) {
+      telaCheia(`<h1>06:00</h1>
+        <p>O Fiscal fica parado, confuso... e se desfaz em papelada.</p>
+        <p>O sol nasce. A faxineira da manhã chega, olha a papelada no chão e suspira:</p>
+        <p><i>"Ah, ele de novo? Vem toda noite. Ninguém sabe quem contratou."</i></p>`, 'Ver créditos', () => {
+        telaCheia(`<h1>PLANTÃO NO BANHEIRO</h1>
+          <p>Episódio 1 — A Ronda do Fiscal</p>
+          <p class="aviso-parodia">${esc(AVISO_PARODIA)}</p>
+          <p class="controles">Fiscal Pavonato · Lulão · Mamãe Falou · Renan Santarém · Ministro Moraez<br>
+          Kim Katagiri · Nicolas Ferrer · Seu Jairo · Flávio "Zero Um" · A Faxineira</p>`, 'Continuar', onFim);
+      });
+    },
+
+    posCreditos(onFim) {
+      const t = telaCheia(`<p class="controles">(o telefone do guichê toca)</p>
+        <p><i>"Alô, é do TRANSporte? ... Digo, do banheiro? Preciso fazer uma fiscalização."</i></p>
+        <h2 style="margin-top:2em">FIM</h2>`, 'Jogar de novo', onFim);
+      return t;
+    },
+  };
+}

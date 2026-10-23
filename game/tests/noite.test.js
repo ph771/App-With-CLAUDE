@@ -64,31 +64,37 @@ test('tempo acabou com tarefa pendente: reprovado', () => {
   assert.equal(n.noite.relatorio()[0], 'reprovado');
 });
 
-test('poças só a partir das 02:00, no máximo 3, e entram nas tarefas', () => {
+test('fita só a partir das 02:00, no máximo 2, uma por porta, e entra nas tarefas', () => {
   const n = montar(); ate(n, 10);
-  assert.equal(n.noite.adicionarPoca({ x: 1, z: 1 }), false);
+  assert.equal(n.noite.adicionarFita('masc_t'), false);
   ate(n, 125);
-  for (let i = 0; i < 5; i++) n.noite.adicionarPoca({ x: i, z: 0 });
-  const pocas = n.noite.tarefas().filter((t) => t.poca);
-  assert.equal(pocas.length, 3);
-  assert.equal(pocas[0].ferramenta, 'esfregao');
+  assert.equal(n.noite.adicionarFita('masc_t'), true);
+  assert.equal(n.noite.adicionarFita('masc_t'), false);
+  assert.equal(n.noite.adicionarFita('fem_t'), true);
+  assert.equal(n.noite.adicionarFita('banheiro_vip'), false);
+  const fitas = n.noite.tarefas().filter((t) => t.fita);
+  assert.equal(fitas.length, 2);
+  assert.equal(fitas[0].ferramenta, null);
+  assert.deepEqual(n.noite.portasInterditadas().sort(), ['fem_t', 'masc_t']);
+  n.noite.progredir(fitas[0].id, 99);
+  assert.deepEqual(n.noite.portasInterditadas(), ['fem_t']);
 });
 
-test('hora não termina com poça aberta', () => {
+test('hora não termina com porta interditada', () => {
   const n = montar(); ate(n, 125);
   for (const t of n.noite.tarefas()) n.noite.progredir(t.id, 99);
-  n.noite.adicionarPoca({ x: 0, z: 0 });
+  n.noite.adicionarFita('banheiro_vip');
   assert.ok(!n.noite.update().some((e) => e.tipo === 'hora_concluida'));
 });
 
-test('voltarCheckpoint: tarefas e poças zeram, relatório e eventos voltam', () => {
+test('voltarCheckpoint: tarefas e fitas zeram, relatório e eventos voltam', () => {
   const n = montar(); ate(n, 125);
   n.noite.progredir(HORAS[2][0].id, 99);
-  n.noite.adicionarPoca({ x: 0, z: 0 });
+  n.noite.adicionarFita('fem_t');
   n.inventario.adicionar('ordem');
   n.noite.voltarCheckpoint();
   assert.ok(Math.abs(n.clock.minutos() - 120) < 1);
-  assert.ok(n.noite.tarefas().every((t) => !t.feita && !t.poca));
+  assert.ok(n.noite.tarefas().every((t) => !t.feita && !t.fita));
   assert.equal(n.inventario.tem('ordem'), false);
   assert.deepEqual(n.noite.relatorio().slice(0, 3), ['reprovado', 'reprovado', null]);
   const ev = ate(n, 150);

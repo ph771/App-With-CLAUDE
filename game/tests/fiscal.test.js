@@ -135,3 +135,23 @@ test('trégua: anda mas não alcança', () => {
   assert.equal(passo(f, 4, { minuto: 130, jogador: { x: 0.5, z: 0 }, olhando: false }), null);
   assert.equal(passo(f, 2, { minuto: 130, jogador: { x: 0.5, z: 0 }, olhando: false }), 'alcancou');
 });
+
+test('perseguição: corre 2,9 m/s mesmo sendo olhado', () => {
+  const f = createFiscal({ rota: [], origem });
+  f.perseguir(35);
+  passo(f, 2, { minuto: 130, jogador: { x: 30, z: 0 }, olhando: true });
+  assert.ok(Math.abs(f.posicao().x - 5.8) < 1e-6, JSON.stringify(f.posicao()));
+  assert.ok(f.perseguindo());
+});
+test('perseguição acaba sozinha depois do tempo', () => {
+  const f = createFiscal({ rota: [], origem });
+  f.perseguir(3);
+  passo(f, 3.2, { minuto: 130, jogador: { x: 30, z: 0 }, olhando: false });
+  assert.equal(f.perseguindo(), false);
+});
+test('perseguição ignora trégua e alcança', () => {
+  const f = createFiscal({ rota: [], origem });
+  f.tregua(25); f.perseguir(35);
+  assert.equal(passo(f, 1, { minuto: 130, jogador: { x: 2, z: 0 }, olhando: true }), 'alcancou');
+});
+test('pararPerseguicao', () => { const f = createFiscal({ rota: [], origem }); f.perseguir(30); f.pararPerseguicao(); assert.equal(f.perseguindo(), false); });

@@ -1,7 +1,7 @@
 // A noite (Versão B): cada hora tem tarefas. Feitas a tempo = APROVADO no relatório;
 // o tempo da hora acabou com algo pendente = REPROVADO. Às 06:00, entregar o relatório.
 import { VISITANTES } from '../data/visitantes.js';
-import { HORAS, TAREFA_FINAL, SUSTOS, TELEFONEMAS, POCAS_MAX } from '../data/noite.js';
+import { HORAS, TAREFA_FINAL, SUSTOS, TELEFONEMAS, FITAS, FITAS_MAX } from '../data/noite.js';
 
 export { SUSTOS };
 
@@ -87,17 +87,20 @@ export function createNoite({ clock, fiscal, inventario, quiz }) {
     },
     concluirTarefa(id) { const t = tarefas.find((x) => x.id === id); if (t) { t.feita = true; t.progresso = t.segundos; } },
 
-    // O Fiscal deixa poças a partir das 02:00 (no máximo POCAS_MAX abertas).
-    adicionarPoca(ponto) {
-      if (horaAtual < 2 || horaAtual >= 6 || relatorio[horaAtual] !== null) return false;
-      if (tarefas.filter((t) => t.poca && !t.feita).length >= POCAS_MAX) return false;
+    // O Fiscal interdita portas de banheiro a partir das 02:00 (no máximo FITAS_MAX ao mesmo tempo).
+    adicionarFita(porta) {
+      if (!FITAS[porta] || horaAtual < 2 || horaAtual >= 6 || relatorio[horaAtual] !== null) return false;
+      const abertas = tarefas.filter((t) => t.fita && !t.feita);
+      if (abertas.length >= FITAS_MAX || abertas.some((t) => t.porta === porta)) return false;
       contadorPoca++;
       tarefas.push(novaTarefa({
-        id: `poca_${contadorPoca}`, texto: 'Limpar a poça que o Fiscal deixou', onde: 'Siga as pegadas',
-        ferramenta: 'esfregao', ponto: { ...ponto }, segundos: 2, poca: true,
+        id: `fita_${porta}_${contadorPoca}`, texto: 'Arrancar a fita "INTERDITADO"', onde: FITAS[porta].nome,
+        ferramenta: null, ponto: { ...FITAS[porta].ponto }, segundos: 2, fita: true, porta,
       }));
       return true;
     },
+    // Portas interditadas agora (para bloquear a passagem).
+    portasInterditadas: () => tarefas.filter((t) => t.fita && !t.feita).map((t) => t.porta),
 
     relatorio: () => [...relatorio],
     salvarCheckpoint,

@@ -67,3 +67,11 @@ test('respostas mostradas são as 3 da pergunta', () => {
   const original = PERGUNTAS.find((p) => p.fala === m.fala);
   assert.deepEqual([...m.respostas].sort(), original.respostas.map((r) => r.texto).sort());
 });
+
+test('limite de tempo por pergunta (4 s nas horas finais)', () => {
+  const q = novo(); q.iniciar(false, 4);
+  assert.ok(Math.abs(q.restante() - 4) < 1e-9);
+  let r = null; for (let i = 0; i < 41; i++) r = q.tick(0.1) ?? r;
+  assert.equal(r, 'tempo');
+  assert.equal(q.limite(), 4);
+});

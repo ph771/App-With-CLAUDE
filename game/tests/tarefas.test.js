@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { HORAS, TAREFA_FINAL } from '../src/data/noite.js';
 import { PAREDES, PORTA_CABINE_01 } from '../src/world/planta.js';
 import { regiaoDe } from '../src/world/nav.js';
+import { FAVORES } from '../src/data/favores.js';
 
 const RAIO_JOGADOR = 0.3, RAIO_INTERACAO = 1.5;
 const livre = (p) => regiaoDe(p) && ![...PAREDES, PORTA_CABINE_01].some((w) =>
@@ -32,5 +33,13 @@ test('toda tarefa diz onde fica e tem tempo de segurar', () => {
   for (const t of [...HORAS.flat(), TAREFA_FINAL]) {
     assert.ok(t.onde && t.texto, t.id);
     assert.ok(t.segundos >= 2 && t.segundos <= 4, t.id);
+  }
+});
+
+test('objetos dos favores ficam em lugares alcançáveis', () => {
+  for (const [id, f] of Object.entries(FAVORES)) {
+    if (f.tipo !== 'pegar') continue;
+    assert.ok(regiaoDe(f.objeto.ponto), `${id}: fora de sala`);
+    assert.ok(alcancavel(f.objeto.ponto), `${id}: inalcançável`);
   }
 });

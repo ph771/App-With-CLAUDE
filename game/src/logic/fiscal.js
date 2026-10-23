@@ -2,6 +2,8 @@
 // 1,1 m: dá para passar rente à parede de um corredor de 3 m sem ser pego.
 export const DISTANCIA_ALCANCE = 1.1;
 const ESPERA_DISTRACAO = 5;
+// Na perseguição ele corre: mais rápido que você andando, mais lento que você correndo.
+export const VELOCIDADE_PERSEGUICAO = 2.9;
 
 export function velocidadeBase(minuto) {
   if (minuto >= 300) return 1.0;
@@ -18,7 +20,7 @@ export function createFiscal({ rota, origem, navegar = (_p, alvo) => alvo }) {
   function inicial() {
     return {
       pos: { ...origem }, indice: 0, mult: 1, horaMult: null,
-      suspenso: 0, pausado: 0, tregua: 0, distracao: null, esperaDistracao: 0,
+      suspenso: 0, pausado: 0, tregua: 0, distracao: null, esperaDistracao: 0, perseguindo: 0,
     };
   }
 
@@ -51,6 +53,14 @@ export function createFiscal({ rota, origem, navegar = (_p, alvo) => alvo }) {
       else if (s.horaMult !== null && s.horaMult !== hora) { s.mult = 1; s.horaMult = null; }
 
       if (s.suspenso > 0) { s.suspenso = Math.max(0, s.suspenso - dt); return null; }
+      if (s.perseguindo > 0) {
+        // Perseguição: corre, ignora olhar e trégua.
+        s.perseguindo = Math.max(0, s.perseguindo - dt);
+        if (s.pausado > 0) { s.pausado = Math.max(0, s.pausado - dt); return null; }
+        if (dist(s.pos, jogador) < DISTANCIA_ALCANCE) return 'alcancou';
+        andarAte(alvo ?? jogador, VELOCIDADE_PERSEGUICAO * dt);
+        return dist(s.pos, jogador) < DISTANCIA_ALCANCE ? 'alcancou' : null;
+      }
       const vel = velocidadeBase(minuto) * s.mult;
       if (vel === 0) return null;
       if (s.pausado > 0) { s.pausado = Math.max(0, s.pausado - dt); return null; }
@@ -80,6 +90,9 @@ export function createFiscal({ rota, origem, navegar = (_p, alvo) => alvo }) {
     voltarParaOrigem(ponto = origem) { s.pos = { ...ponto }; s.indice = 0; s.distracao = null; },
     suspender(seg) { s.suspenso = seg; },
     pausar(seg) { s.pausado = seg; },
+    perseguir(seg) { s.perseguindo = seg; s.tregua = 0; s.distracao = null; },
+    pararPerseguicao() { s.perseguindo = 0; },
+    perseguindo: () => s.perseguindo > 0,
     // Trégua: ele anda, mas não te pega (depois de uma pergunta).
     tregua(seg) { s.tregua = seg; },
     distrair(ponto) { s.distracao = { ...ponto }; s.esperaDistracao = ESPERA_DISTRACAO; },

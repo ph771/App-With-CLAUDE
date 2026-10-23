@@ -15,11 +15,13 @@ export function createQuiz({ perguntas, final, rng = Math.random, limite = 5 }) 
   let atual = null; // { pergunta, respostas: [{texto, segura}] }
   let restante = 0;
   let erros = 0;
+  let limiteAtual = limite;
 
   const encerrar = () => { atual = null; };
 
   return {
-    iniciar(ehFinal = false) {
+    // `seg` (opcional): tempo desta pergunta (4 s nas horas finais).
+    iniciar(ehFinal = false, seg = limite) {
       let pergunta;
       if (ehFinal) pergunta = final;
       else {
@@ -27,7 +29,8 @@ export function createQuiz({ perguntas, final, rng = Math.random, limite = 5 }) 
         pergunta = fila.pop();
       }
       atual = { pergunta, respostas: embaralhar(pergunta.respostas, rng) };
-      restante = limite;
+      limiteAtual = seg;
+      restante = seg;
       return { fala: pergunta.fala, respostas: atual.respostas.map((r) => r.texto) };
     },
     tick(dt) {
@@ -48,6 +51,7 @@ export function createQuiz({ perguntas, final, rng = Math.random, limite = 5 }) 
     pular: encerrar,
     ativa: () => atual !== null,
     restante: () => Math.max(restante, 0),
+    limite: () => limiteAtual,
     erros: () => erros,
     perdeu: () => erros >= ERROS_PARA_PERDER,
     zerarErros() { erros = 0; },

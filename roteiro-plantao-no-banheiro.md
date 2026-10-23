@@ -63,7 +63,7 @@ faz uma piada e deixa uma ajuda. Depois vai embora. As piadas usam só manias e 
 | 01h | **Mamãe Falou** | Entra filmando, como nas entrevistas de rua: "MAMÃE FALOU! Olha o cara de prancheta parado na porta do banheiro, gente!" | **Microfone:** se você usar, o Fiscal para para dar entrevista e você ganha tempo |
 | 02h | **Renan Santarém** | "Três milhões de votos pra fiscalizar banheiro, cara? É meio louco isso aí." | **Caneca:** você joga longe e o Fiscal vai atrás do barulho |
 | 02h30 | **Ministro Moraez** | Entra com uma pasta de processos: "Este fiscal está sob investigação. O perfil dele está suspenso. O banheiro também, se precisar." | **Ordem de suspensão:** o Fiscal some por 30 segundos |
-| 03h | **Kim Katagiri** | Para na frente do espelho, se olha e suspira: "Parem de me mandar esse meme." Depois fala muito rápido sobre a live de 4 horas que fez contra o Fiscal. | **Mapa** do banheiro com o caminho que o Fiscal faz |
+| 03h | **Kim Katagiri** | Para na frente do espelho, se olha e suspira: "Parem de me mandar esse meme." Depois desabafa, falando muito rápido: "Lá no meu trabalho é sempre assim: ninguém lê, ninguém trabalha, ninguém faz nada. Vocês ficam fazendo dancinha pra internet e não tem uma proposta pra mudar os banheiros do Brasil! Olha o estado dessa pia!" | **Mapa** do banheiro com o caminho que o Fiscal faz |
 | 04h | **Nicolas Ferrer** | Chega com uma peruca na mão: "Ele pegou minha peruca emprestada pra um vídeo e não devolveu." | **Peruca:** com ela, o Fiscal te confunde com outra pessoa uma vez e pula a pergunta |
 | 04h30 | **Seu Jairo** | "Esse rapaz aí? Mandei ele cuidar do banheiro pra parar de me ligar, talkey?" / "Banheiro não é prioridade. Prioridade é pão com leite condensado." | **Lata de leite condensado:** você corre mais rápido por 1 minuto |
 | 05h | **Flávio "Zero Um"** | "Eu sou o 01 em tudo, mas aqui na fila da cabine eu sou o 02." / "Meu pai mandou avisar que esse fiscal não é do partido." | **Chave da cabine 01**, o único lugar onde você pode se esconder |
@@ -87,7 +87,7 @@ As ajudas são de uso único. O jogador escolhe a hora certa de usar cada uma.
 
 ### 03h–04h — Perseguição
 - As luzes piscam. O Fiscal só anda quando você não olha para ele.
-- Kim Katagiri para no espelho, reclama do meme e deixa o mapa.
+- Kim Katagiri para no espelho, reclama do meme, desabafa que no trabalho dele ninguém faz nada além de dancinha pra internet, e deixa o mapa.
 - Você encontra o crachá dele no chão: "Fiscal de Banheiro — Cargo inexistente".
 - Nicolas Ferrer aparece procurando a peruca e deixa uma de reserva com você.
 - Seu Jairo passa reclamando que o banheiro não é prioridade e deixa o leite condensado.

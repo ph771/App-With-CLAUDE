@@ -1,0 +1,72 @@
+// O Fiscal Pavonato: só anda quando o jogador não está olhando.
+export const DISTANCIA_ALCANCE = 1.5;
+const ESPERA_DISTRACAO = 5;
+
+export function velocidadeBase(minuto) {
+  if (minuto >= 300) return 1.2;
+  if (minuto >= 240) return 0.9;
+  if (minuto >= 120) return 0.5;
+  return 0;
+}
+
+const dist = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
+
+export function createFiscal({ rota, origem }) {
+  let s = inicial();
+
+  function inicial() {
+    return {
+      pos: { ...origem }, indice: 0, mult: 1, horaMult: null,
+      suspenso: 0, pausado: 0, distracao: null, esperaDistracao: 0,
+    };
+  }
+
+  // Anda até `alvo` gastando até `d` metros; devolve quanto sobrou.
+  function andar(alvo, d) {
+    const falta = dist(s.pos, alvo);
+    if (falta <= d) { s.pos = { x: alvo.x, z: alvo.z }; return d - falta; }
+    s.pos = { x: s.pos.x + ((alvo.x - s.pos.x) / falta) * d, z: s.pos.z + ((alvo.z - s.pos.z) / falta) * d };
+    return 0;
+  }
+
+  return {
+    update(dt, { minuto, jogador, olhando }) {
+      dt = Math.min(Math.max(dt, 0), 0.1);
+      const hora = Math.floor(minuto / 60);
+      // O bônus de velocidade por erro dura até a hora acabar.
+      if (s.horaMult === -1) s.horaMult = hora;
+      else if (s.horaMult !== null && s.horaMult !== hora) { s.mult = 1; s.horaMult = null; }
+
+      if (s.suspenso > 0) { s.suspenso = Math.max(0, s.suspenso - dt); return null; }
+      const vel = velocidadeBase(minuto) * s.mult;
+      if (vel === 0) return null;
+      if (dist(s.pos, jogador) < DISTANCIA_ALCANCE) return 'alcancou';
+      if (s.pausado > 0) { s.pausado = Math.max(0, s.pausado - dt); return null; }
+
+      if (s.distracao) {
+        if (dist(s.pos, s.distracao) > 1e-9) { if (!olhando) andar(s.distracao, vel * dt); return null; }
+        s.esperaDistracao -= dt;
+        if (s.esperaDistracao <= 0) s.distracao = null;
+        return null;
+      }
+
+      if (olhando) return null;
+      let d = vel * dt;
+      while (d > 1e-12 && s.indice < rota.length) {
+        d = andar(rota[s.indice], d);
+        if (dist(s.pos, rota[s.indice]) < 1e-9) s.indice++;
+      }
+      if (d > 1e-12) andar(jogador, d);
+      return dist(s.pos, jogador) < DISTANCIA_ALCANCE ? 'alcancou' : null;
+    },
+    posicao: () => ({ ...s.pos }),
+    visivel: (minuto) => minuto >= 60 && s.suspenso <= 0,
+    voltarParaOrigem() { s.pos = { ...origem }; s.indice = 0; s.distracao = null; },
+    suspender(seg) { s.suspenso = seg; },
+    pausar(seg) { s.pausado = seg; },
+    distrair(ponto) { s.distracao = { ...ponto }; s.esperaDistracao = ESPERA_DISTRACAO; },
+    errou() { s.mult *= 1.15; if (s.horaMult === null) s.horaMult = -1; },
+    snapshot: () => structuredClone(s),
+    restaurar(snap) { s = structuredClone(snap); },
+  };
+}

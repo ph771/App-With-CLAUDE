@@ -123,6 +123,7 @@ export const MOVEIS = [
   caixa('bancada', 123.4, 124, -9, -5, 0.9, { espelho: 'oeste', ouro: true }),
   caixa('prateleira', -30, -29.2, -6.5, -0.8, 2.2),
   caixa('prateleira', -27, -21, -9, -8.2, 2.2),
+  caixa('armario', -20.8, -20.1, -5.4, -4.2, 2.1), // armário de vassouras (esconderijo)
   caixa('mesa', 22.5, 25.5, -4, -2.6, 0.8, { modelo: 'copa' }),
   caixa('balcao', 27.4, 28, -5.5, -0.5, 1),
   caixa('tribuna', 97, 103, -19.2, -17.6, 1.2),
@@ -162,6 +163,22 @@ export const DECORACAO = [
   // Banheiro dos Parlamentares e imprensa
   deco('pottedPlant', 114.6, -3.6, SUL, 1.1, 0.5, 0.5), deco('trashcan', 120.5, -3.6, SUL, 0.7, 0.4, 0.4),
   deco('pottedPlant', 85.4, -3.6, SUL, 1.1, 0.5, 0.5), deco('chairDesk', 77, -4.5, LESTE, 1.0, 0.6, 0.6),
+];
+
+// Esconderijos: `fora` = onde se aperta E (e onde você sai); `dentro` = onde a câmera fica; `olhar` = para onde olha.
+// `altura` = altura dos olhos escondido. `seguro`: o Fiscal nunca procura ali (cabine 01, com a chave).
+export const ESCONDERIJOS = [
+  ...CABINES.map((c) => {
+    const cx = (c.x1 + c.x2) / 2;
+    return {
+      id: `cabine_${c.sala}_${c.numero}`, nome: `Cabine ${String(c.numero).padStart(2, '0')}`, tipo: 'cabine', sala: c.sala, numero: c.numero,
+      fora: { x: cx, z: c.z2 + 0.7 }, dentro: { x: cx, z: c.z2 - 0.35 }, olhar: { x: cx, z: c.z2 + 3 }, altura: 1.5,
+      seguro: c.sala === 'masc_t' && c.numero === 1,
+    };
+  }),
+  { id: 'armario_almox', nome: 'Armário de vassouras', tipo: 'armario', fora: { x: -21.4, z: -4.8 }, dentro: { x: -20.45, z: -4.8 }, olhar: { x: -25, z: -4.8 }, altura: 1.55 },
+  { id: 'mesa_imprensa', nome: 'Debaixo da mesa', tipo: 'mesa', fora: { x: 81, z: -7.6 }, dentro: { x: 81, z: -8.7 }, olhar: { x: 81, z: -4 }, altura: 0.45 },
+  { id: 'tribuna', nome: 'Atrás da tribuna', tipo: 'tribuna', fora: { x: 104, z: -18.4 }, dentro: { x: 100, z: -19.55 }, olhar: { x: 100, z: -10 }, altura: 0.75 },
 ];
 
 export const PAREDES = [

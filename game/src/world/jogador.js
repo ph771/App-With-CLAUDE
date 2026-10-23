@@ -28,6 +28,7 @@ export function criarJogador(camera, dom, obterParedes, inicio, { entrada } = {}
     camera.quaternion.setFromEuler(e);
   }
   let pos = { ...inicio };
+  let alturaOlhos = ALTURA_OLHOS;
   let balanco = 0;
   camera.position.set(pos.x, ALTURA_OLHOS, pos.z);
 
@@ -71,14 +72,16 @@ export function criarJogador(camera, dom, obterParedes, inicio, { entrada } = {}
         pos = moverComColisao(pos, { x: mx * d, z: mz * d }, obterParedes(), 0.3);
         balanco += dt * 9 * multVel;
       }
-      camera.position.set(pos.x, ALTURA_OLHOS + Math.sin(balanco) * 0.035 * Math.min(multVel, 1.6), pos.z);
+      camera.position.set(pos.x, alturaOlhos + Math.sin(balanco) * 0.035 * Math.min(multVel, 1.6), pos.z);
       return n > 0; // andou neste quadro
     },
     // Gira a câmera pelo arrasto do dedo (px).
     girar(dx, dy) { girar(dx, dy * (ajustes.inverterY ? -1 : 1), 0.006 * ajustes.sensToque); },
     posicao: () => ({ ...pos }),
-    teleportar(p) { pos = { ...p }; camera.position.set(pos.x, ALTURA_OLHOS, pos.z); },
-    olharPara(p) { camera.lookAt(p.x, ALTURA_OLHOS, p.z); },
+    teleportar(p) { pos = { ...p }; camera.position.set(pos.x, alturaOlhos, pos.z); },
+    // Altura dos olhos (agachado debaixo da mesa, atrás da tribuna...).
+    definirAltura(h = ALTURA_OLHOS) { alturaOlhos = h; camera.position.y = h; },
+    olharPara(p) { camera.lookAt(p.x, alturaOlhos, p.z); },
     direcao,
     // O ponto está no campo de visão (até `angulo` graus do centro) e sem parede no meio?
     olhandoPara(ponto, paredes, angulo = 35) {

@@ -76,6 +76,10 @@ export function criarAudio() {
     entrada: (t) => { tom(988, 'sine', t, 0.4, 0.15); tom(784, 'sine', t + 0.25, 0.6, 0.15); },
     papel: (t) => ruidoFiltrado(t, 0.6, 3000, 0.6, 0.25),
     pano: (t) => { ruidoFiltrado(t, 0.5, 1200, 0.8, 0.25); ruidoFiltrado(t + 0.5, 0.5, 1000, 0.8, 0.25); },
+    alarme: (t) => { tom(880, 'square', t, 0.25, 0.1, 660); tom(660, 'square', t + 0.3, 0.25, 0.1, 880); },
+    fita: (t) => { ruidoFiltrado(t, 0.35, 2500, 1.2, 0.35); ruidoFiltrado(t + 0.12, 0.25, 1800, 1.2, 0.3); },
+    rangido: (t) => { tom(180, 'sawtooth', t, 0.9, 0.12, 120); tom(240, 'sawtooth', t + 0.1, 0.7, 0.06, 160); },
+    suspiro: (t) => { ruidoFiltrado(t, 0.8, 700, 0.8, 0.45); },
     interruptor: (t) => { ruidoFiltrado(t, 0.05, 4000, 1, 0.6); tom(60, 'square', t, 0.08, 0.3); },
   };
 

@@ -22,12 +22,15 @@ export function criarUI(root, { toque = false } = {}) {
     progresso: el('div', 'progresso oculto', '<div class="rotulo"></div><div class="barra"><div></div></div>'),
     carimbo: el('div', 'carimbo oculto'),
     folego: el('div', 'folego oculto', '<div></div>'),
+    respiracao: el('div', 'respiracao oculto', '<div class="rotulo"></div><div class="barra"><div></div></div>'),
+    alerta: el('div', 'alerta-vermelho'),
+    frestas: el('div', 'frestas oculto'),
     flash: el('div', 'flash'),
     escuro: el('div', 'escuro'),
   };
   const hud = el('div', 'oculto');
-  for (const k of ['mira', 'tarefas', 'relogio', 'erros', 'itens', 'dica', 'legenda', 'progresso', 'folego']) hud.append(camadas[k]);
-  root.append(hud, camadas.carimbo, camadas.toast, camadas.flash, camadas.escuro, el('div', 'aviso-girar', 'Deite o celular<br>para jogar'));
+  for (const k of ['mira', 'tarefas', 'relogio', 'erros', 'itens', 'dica', 'legenda', 'progresso', 'folego', 'respiracao']) hud.append(camadas[k]);
+  root.append(camadas.frestas, camadas.alerta, hud, camadas.carimbo, camadas.toast, camadas.flash, camadas.escuro, el('div', 'aviso-girar', 'Deite o celular<br>para jogar'));
   let aoTocarItem = null;
   camadas.itens.addEventListener('click', (e) => {
     const b = e.target.closest('[data-i]');
@@ -120,6 +123,18 @@ export function criarUI(root, { toque = false } = {}) {
       camadas.dica.classList.toggle('oculto', !texto);
       if (texto) camadas.dica.innerHTML = `<b>[E]</b> ${esc(texto)}`;
     },
+
+    // Escondido: mostra a barra de ar e o que fazer (null esconde).
+    respiracao(texto, frac, perigo) {
+      camadas.respiracao.classList.toggle('oculto', texto === null);
+      if (texto === null) return;
+      camadas.respiracao.classList.toggle('perigo', Boolean(perigo));
+      camadas.respiracao.querySelector('.rotulo').textContent = texto;
+      camadas.respiracao.querySelector('.barra div').style.width = `${Math.round(frac * 100)}%`;
+    },
+    // Tela pulsando em vermelho durante a perseguição.
+    alerta(ligado) { camadas.alerta.classList.toggle('ativo', ligado); },
+    frestas(v) { camadas.frestas.classList.toggle('oculto', !v); },
 
     // Barra de fôlego (some quando está cheia).
     folego(frac, cansado) {

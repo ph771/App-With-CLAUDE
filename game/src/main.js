@@ -5,11 +5,11 @@ import { criarPredio } from './world/predio.js';
 import { criarJogador } from './world/jogador.js';
 import { criarRenderPS1 } from './world/ps1.js';
 import {
-  PAREDES, PONTOS, CABINE_01, PORTA_CABINE_01, ESCADAS, FERRAMENTAS_LUGAR, LUGAR_VISITANTE, SALAS, andarDe,
+  PAREDES, PONTOS, PORTA_CABINE_01, ESCADAS, FERRAMENTAS_LUGAR, LUGAR_VISITANTE, SALAS, ESCONDERIJOS, andarDe,
 } from './world/planta.js';
 import { temVisao } from './world/fisica.js';
 import { criarPersonagem, animarParado, animarAndando, IDS_PERSONAGENS } from './world/personagens.js';
-import { criarFerramentaNaMao, criarPagina } from './world/objetos.js';
+import { criarFerramentaNaMao, criarPagina, criarObjetoFavor } from './world/objetos.js';
 import { criarMarcador, animarMarcador } from './world/marcadores.js';
 import { proximoAlvo, regiaoDe } from './world/nav.js';
 import { createClock } from './logic/clock.js';
@@ -21,7 +21,10 @@ import { createFerramentas } from './logic/ferramentas.js';
 import { createFolego, VELOCIDADE_CORRIDA } from './logic/folego.js';
 import { PERGUNTAS, PERGUNTA_FINAL } from './data/perguntas.js';
 import { ITENS } from './data/visitantes.js';
-import { FERRAMENTAS } from './data/noite.js';
+import { FERRAMENTAS, FITAS, DURACAO_PERSEGUICAO } from './data/noite.js';
+import { FAVORES } from './data/favores.js';
+import { createFavores } from './logic/favores.js';
+import { createRespiracao } from './logic/esconderijo.js';
 import { PAGINAS } from './data/paginas.js';
 import { criarUI } from './ui/ui.js';
 import { criarAudio } from './audio.js';
@@ -39,7 +42,7 @@ const TOQUE = params.has('toque') || matchMedia('(pointer: coarse)').matches;
 if (TOQUE) document.body.classList.add('toque');
 // Duração máxima de cada hora (segundos reais). ?rapido=1 para testes.
 const SEGUNDOS_POR_HORA = Number(params.get('seghora')) || (params.has('rapido') ? 40 : 270);
-const POCA_A_CADA = 40; // segundos andando entre uma poça e outra do Fiscal
+const FITA_A_CADA = 45; // segundos entre uma porta interditada e outra
 const SALAS_SEGURAS = ['almox', 'hall_s', 'maquinas']; // o Fiscal não entra antes das 04:00
 
 // ---------- Mundo ----------
@@ -81,7 +84,8 @@ const mundo = criarPredio(scene, { instanciar });
 if (params.has('modelos')) MODELOS.forEach((n, i) => { const m = instanciar(n, { x: -6 + (i % 11) * 1.2, z: 2 + Math.floor(i / 11) * 2.2, altura: 0.9 }); if (m) scene.add(m); });
 const efeitos = { lanterna: false, cabine01: false, mostrarRota: false, leite: null };
 let cabineAberta = false;
-const paredesAtuais = () => (cabineAberta ? PAREDES : [...PAREDES, PORTA_CABINE_01]);
+// Paredes de agora: cabine 01 trancada (sem a chave) e portas interditadas com fita.
+const paredesAtuais = () => [...PAREDES, ...(cabineAberta ? [] : [PORTA_CABINE_01]), ...noite.portasInterditadas().map((p) => FITAS[p].parede)];
 const controlesToque = TOQUE ? criarControlesToque(document.getElementById('ui')) : null;
 const jogador = criarJogador(camera, canvas, paredesAtuais, PONTOS.inicio, { entrada: controlesToque?.entrada });
 const travarMouse = () => { if (!SEM_TRAVA && !TOQUE) jogador.travar(); };
@@ -91,6 +95,9 @@ const lanterna = new THREE.SpotLight(0xfff2d0, 0, 14, 0.45, 0.5, 1.2);
 lanterna.position.set(0, -0.1, 0);
 lanterna.target.position.set(0, -0.1, -1);
 camera.add(lanterna, lanterna.target);
+// Luz fraquinha perto de você quando está escondido (senão o lado de dentro da porta fica preto).
+const luzEsconderijo = new THREE.PointLight(0xc8d0c0, 0, 2.2, 2);
+camera.add(luzEsconderijo);
 
 const ui = criarUI(document.getElementById('ui'), { toque: TOQUE });
 const audio = criarAudio();
@@ -121,6 +128,8 @@ const inventario = createInventario();
 const noite = createNoite({ clock, fiscal, inventario, quiz });
 const ferramentas = createFerramentas();
 const folego = createFolego();
+const favores = createFavores();
+const respiracao = createRespiracao();
 const OUVE_CORRIDA = 10; // metros: o Fiscal ouve você correndo
 
 // ---------- Personagens e objetos ----------
@@ -154,7 +163,11 @@ let apagao = 0;
 let susto = null;
 let vendoMonitor = 0;
 let tempoPasso = 0;
-let tempoPoca = POCA_A_CADA;
+let tempoFita = FITA_A_CADA;
+let escondido = null; // esconderijo em que você está
+let prendendoAr = false; // Espaço (ou botão no celular)
+let perseg = { ativa: false, ultimo: null, busca: null, abrindo: 0, alarme: 0 };
+const objetosFavor = new Map(); // id do objeto → mesh
 let segurando = null; // id da tarefa que está sendo feita (segurar E)
 let checkpointExtra = null;
 let ultimaPosFiscal = fiscal.posicao();
@@ -177,6 +190,17 @@ function descartar(obj) {
 }
 
 const nomeSala = (id) => SALAS.find((s) => s.id === id)?.nome ?? '';
+const VISITANTES_NOME = { lulao: 'Lulão', mamae_falou: 'Mamãe Falou', renan: 'Renan Santarém', moraez: 'Ministro Moraez', kim: 'Kim Katagiri', nicolas: 'Nicolas Ferrer', jairo: 'Seu Jairo', flavio: 'Flávio "Zero Um"' };
+function resumoFavor(id) {
+  const f = FAVORES[id];
+  if (!favores.podeEntregar(id, { naMao: ferramentas.naMao() })) {
+    if (f.tipo === 'pegar') return favores.carregando().includes(f.objeto.id) ? 'leve até ele' : `${f.objeto.nome} (${f.objeto.onde})`;
+    if (f.tipo === 'filmar') return `filmar o Fiscal ${Math.floor(favores.fracFilmagem() * f.segundos)}/${f.segundos} s`;
+    if (f.tipo === 'mandado') return 'entregar o mandado ao Fiscal';
+    return `levar ${FERRAMENTAS[f.ferramenta]} na mão`;
+  }
+  return 'pronto, volte e fale com ele';
+}
 const mesmoAndar = (a, b) => andarDe(a) === andarDe(b);
 const perto = (a, b, r) => Math.hypot(a.x - b.x, a.z - b.z) <= r;
 
@@ -212,15 +236,51 @@ function entrarVisitante(v, direto = false) {
 }
 
 function falarCom(vis) {
+  const id = vis.v.id;
+  const f = FAVORES[id];
+  const estado = favores.estado(id);
+  if (estado === 'novo') {
+    vis.estado = 'falando';
+    ui.dialogo(vis.v.nome, [...vis.v.falas, ...f.pedido], () => { favores.pedir(id); vis.estado = 'pedido'; sincronizarFavores(); });
+    return;
+  }
+  if (!favores.podeEntregar(id, { naMao: ferramentas.naMao() })) {
+    ui.dialogo(vis.v.nome, [lembreteFavor(id)]);
+    return;
+  }
   vis.estado = 'falando';
-  ui.dialogo(vis.v.nome, [...vis.v.falas, vis.v.voto], () => {
+  ui.dialogo(vis.v.nome, [f.obrigado, vis.v.voto], () => {
+    favores.concluir(id);
     inventario.adicionar(vis.v.item);
-    votos.add(vis.v.id);
+    votos.add(id);
     audio.tocar('item');
     const it = ITENS[vis.v.item];
     ui.aviso(`Voto NÃO registrado (${votos.size}/8) · Você recebeu: ${it.nome} — ${it.dica}`, 4.5);
     vis.estado = 'feito';
+    sincronizarFavores();
   });
+}
+
+function lembreteFavor(id) {
+  const f = FAVORES[id];
+  if (f.tipo === 'pegar') return `Ainda tô esperando: ${f.objeto.nome} (${f.objeto.onde}).`;
+  if (f.tipo === 'filmar') return `Fica perto do Fiscal olhando pra ele. Filmado: ${Math.floor(favores.fracFilmagem() * f.segundos)}/${f.segundos} s.`;
+  if (f.tipo === 'mandado') return 'Entregue o mandado ao Fiscal: chegue perto dele e aperte E.';
+  return `Traga ${FERRAMENTAS[f.ferramenta]} na mão.`;
+}
+
+// Objetos dos favores no chão (aparecem depois do pedido, somem quando você pega).
+function sincronizarFavores() {
+  const visiveis = new Map(favores.objetosVisiveis().map((o) => [o.id, o]));
+  for (const [id, m] of objetosFavor) if (!visiveis.has(id)) { scene.remove(m); descartar(m); objetosFavor.delete(id); }
+  for (const [id, o] of visiveis) {
+    if (objetosFavor.has(id)) continue;
+    const m = criarObjetoFavor(id);
+    const naGeladeira = id === 'leite_condensado';
+    m.position.set(o.ponto.x, naGeladeira ? 0.9 : 0, o.ponto.z);
+    scene.add(m);
+    objetosFavor.set(id, m);
+  }
 }
 
 function atualizarVisitantes(t) {
@@ -261,7 +321,8 @@ function tratarEvento(e) {
       cabineAberta,
       ferramenta: ferramentas.snapshot(),
       votos: new Set(votos),
-      pendentes: visitantes.map((v) => v.v),
+      pendentes: visitantes.map((v) => ({ v: v.v, estado: v.estado === 'falando' ? 'esperando' : v.estado })),
+      favores: favores.snapshot(),
     };
     sincronizarPocas();
     if (e.hora > 0 && e.hora < 6) ui.aviso(`${String(e.hora).padStart(2, '0')}:00 — novas tarefas no relatório`, 3);
@@ -284,6 +345,7 @@ function tratarEvento(e) {
   if (e.tipo === 'visitante') entrarVisitante(e.visitante);
   if (e.tipo === 'telefone') { telefoneTocando = 20; proximoToque = 0; }
   if (e.tipo === 'susto') comecarSusto(e.id);
+  if (e.tipo === 'perseguicao') comecarPerseguicao();
 }
 
 function frente(dist) {
@@ -359,6 +421,9 @@ function atualizarLuzes(dt) {
     const queimada = l.sala === 'fem_t' && noite.tarefas().some((x) => x.id === 'lampada_fem' && !x.feita);
     l.luz.intensity = ligada ? l.base * (queimada ? (Math.random() < 0.08 ? 0.5 : 0.04) : tremor) * fraca : 0;
     l.tubo.material.color.setScalar(ligada ? 0.95 * tremor : 0.05);
+    if (!l.cor) l.cor = l.luz.color.clone();
+    if (perseg.ativa) { l.luz.color.setRGB(1, 0.12, 0.08); l.tubo.material.color.setRGB(1, 0.2, 0.15); }
+    else l.luz.color.copy(l.cor);
   }
   // Espelho só reflete quando você está na mesma sala (economiza o celular).
   for (const e of mundo.espelhos) e.espelho.visible = regiaoDe(e.ponto) === sala;
@@ -377,9 +442,13 @@ function atualizarSom(dt) {
 function abrirPergunta(final = false) {
   segurando = null;
   ui.progresso(null);
+  if (escondido) sairEsconderijo();
   if (!final) jogador.olharPara(fiscal.posicao());
   audio.tocar('passo_molhado');
-  const mostrada = quiz.iniciar(final);
+  const limite = final || clock.hora() >= 4 ? 4 : 5;
+  const sorteada = quiz.iniciar(final, limite);
+  // Respostas em letra normal: o "trans" não salta mais aos olhos.
+  const mostrada = { ...sorteada, respostas: sorteada.respostas.map((r) => r.replace(/TRANS/g, 'trans')) };
   const extra = inventario.tem('peruca') ? '(Usar a peruca)' : null;
   perguntaAberta = { final };
   perguntaAberta.controles = ui.pergunta({ ...mostrada, extra }, (i) => {
@@ -406,7 +475,10 @@ function fecharPergunta(segura) {
     agendar(1.8, () => { if (!perguntaAberta) abrirPergunta(true); });
     return;
   }
-  if (!final) { fiscal.voltarParaOrigem(pontoDeRecomeco()); fiscal.pausar(3); fiscal.tregua(25); cacador.cacando = 0; }
+  if (!final) {
+    if (perseg.ativa) terminarPerseguicao(false);
+    fiscal.voltarParaOrigem(pontoDeRecomeco()); fiscal.pausar(3); fiscal.tregua(25); cacador.cacando = 0;
+  }
 }
 
 // Depois de uma pergunta o Fiscal recomeça em outro andar (precisa da escada para te achar).
@@ -499,8 +571,16 @@ function interacaoAtual() {
   const add = (ponto, raio, texto, extra) => {
     if (perto(p, ponto, raio)) opcoes.push({ d: Math.hypot(p.x - ponto.x, p.z - ponto.z), texto, ...extra });
   };
+  if (escondido) return { d: 0, texto: `Sair: ${escondido.nome}`, acao: () => sairEsconderijo() };
+  for (const o of favores.objetosVisiveis()) add(o.ponto, 1.3, `Pegar: ${o.nome}`, { acao: () => pegarObjetoFavor(o) });
+  const fpI = fiscal.posicao();
+  if (favores.temMandado() && fiscal.visivel(clock.minutos()) && mesmoAndar(p, fpI)) add(fpI, 2.2, 'Entregar o mandado ao Fiscal', { acao: entregarMandado });
+  for (const e of ESCONDERIJOS) {
+    if (e.seguro && !cabineAberta) continue;
+    add(e.fora, 0.9, `Esconder: ${e.nome}`, { acao: () => entrarEsconderijo(e) });
+  }
   for (const vis of visitantes) {
-    if (vis.estado === 'esperando') add({ x: vis.mesh.position.x, z: vis.mesh.position.z }, 1.8, `Falar com ${vis.v.nome}`, { acao: () => falarCom(vis) });
+    if (vis.estado === 'esperando' || vis.estado === 'pedido') add({ x: vis.mesh.position.x, z: vis.mesh.position.z }, 1.8, `Falar com ${vis.v.nome}`, { acao: () => falarCom(vis) });
   }
   for (const t of noite.tarefas()) {
     if (t.feita) continue;
@@ -522,12 +602,145 @@ function interacaoAtual() {
   });
   if (telefoneTocando > 0) add(PONTOS.guiche, 1.4, 'Atender o telefone', { acao: atenderTelefone });
   if (!cabineAberta) {
-    add({ x: -18.8, z: -8.8 }, 1, 'Cabine 01 (trancada)', {
+    add({ x: -18.8, z: -8.6 }, 0.9, 'Cabine 01 (trancada)', {
       acao: () => ui.aviso(inventario.tem('chave') ? 'Use a chave (tecla do item).' : 'Trancada. Alguém deve ter a chave.', 2.5),
     });
   }
   opcoes.sort((a, b) => a.d - b.d);
   return opcoes[0] ?? null;
+}
+
+function pegarObjetoFavor(o) {
+  favores.pegarObjeto(o.id);
+  audio.tocar('item');
+  sincronizarFavores();
+  ui.aviso(`Você pegou: ${o.nome}. Leve para ${VISITANTES_NOME[o.de]}.`, 3);
+}
+
+function entregarMandado() {
+  favores.entregarMandado();
+  if (perseg.ativa) terminarPerseguicao(false);
+  fiscal.pausar(4); fiscal.tregua(14);
+  audio.tocar('papel');
+  ui.legenda('Fiscal Pavonato', 'Um mandado?! Isso é uma TRANSgressão... calma, deixa eu ler.', 4);
+}
+
+// ---------- Esconderijos ----------
+// Dentro do armário: esconde o móvel e mostra frestas na tela (você espia por elas).
+function mostrarArmario(v) {
+  const a = mundo.portaArmario();
+  if (!a) return;
+  for (const o of [a.porta, a.corpo, ...a.frestas]) o.visible = v;
+}
+function entrarEsconderijo(e) {
+  acaoFim();
+  escondido = e;
+  respiracao.zerar();
+  // Cabine: fecha a porta, deixando só uma fresta para espiar.
+  const porta = e.tipo === 'cabine' ? mundo.portasCabines[`${e.sala}|${e.numero}`] : null;
+  if (porta) porta.rotation.y = 0.42;
+  luzEsconderijo.intensity = 0.5;
+  mostrarArmario(e.tipo !== 'armario');
+  ui.frestas(e.tipo === 'armario');
+  jogador.teleportar(e.dentro);
+  jogador.definirAltura(e.altura);
+  jogador.olharPara(e.olhar);
+  audio.tocar(e.tipo === 'cabine' || e.tipo === 'armario' ? 'rangido' : 'pano');
+  ui.aviso(`Escondido: ${e.nome}. ${TOQUE ? 'Segure "Prender o ar"' : 'Segure ESPAÇO'} quando ele chegar perto.`, 3.5);
+  controlesToque?.mostrarRespirar(true);
+}
+
+function sairEsconderijo() {
+  if (!escondido) return;
+  const e = escondido;
+  escondido = null;
+  const porta = e.tipo === 'cabine' ? mundo.portasCabines[`${e.sala}|${e.numero}`] : null;
+  if (porta) porta.rotation.y = porta.userData.fechada;
+  luzEsconderijo.intensity = 0;
+  mostrarArmario(true);
+  ui.frestas(false);
+  jogador.definirAltura();
+  jogador.teleportar(e.fora);
+  jogador.olharPara({ x: e.fora.x + (e.fora.x - e.dentro.x) * 4, z: e.fora.z + (e.fora.z - e.dentro.z) * 4 });
+  ui.respiracao(null);
+  controlesToque?.mostrarRespirar(false);
+}
+
+// Ele te achou no esconderijo: abre a porta e pergunta.
+function encontrado() {
+  const e = escondido;
+  audio.tocar(e.tipo === 'cabine' || e.tipo === 'armario' ? 'rangido' : 'susto');
+  ui.flash();
+  sairEsconderijo();
+  const pj = jogador.posicao();
+  fiscal.voltarParaOrigem({ x: pj.x + (e.fora.x - e.dentro.x) * 0.5, z: pj.z + (e.fora.z - e.dentro.z) * 0.5 });
+  ui.legenda('Fiscal Pavonato', 'Achei! Escondido no banheiro? Muito suspeito...', 3);
+  abrirPergunta(false);
+}
+
+// O Fiscal abre um esconderijo (vasculhando). Range a porta; se você está ali, te acha.
+function abrirEsconderijo(e) {
+  audio.tocar('rangido');
+  const porta = e.tipo === 'cabine' ? mundo.portasCabines[`${e.sala}|${e.numero}`] : null;
+  if (porta) { porta.rotation.y = 1.5; agendar(2.5, () => { porta.rotation.y = porta.userData.fechada; }); }
+  if (escondido && escondido.id === e.id) encontrado();
+}
+
+// ---------- Perseguição ----------
+let tentativasPerseg = 0;
+function comecarPerseguicao() {
+  const pj = jogador.posicao();
+  const seguro = clock.minutos() < 240 && SALAS_SEGURAS.includes(regiaoDe(pj));
+  if (modo !== 'jogando' || perguntaAberta || ui.ocupado() || seguro) {
+    if (tentativasPerseg++ < 8) agendar(4, comecarPerseguicao);
+    return;
+  }
+  tentativasPerseg = 0;
+  // Ele surge a uns 14 m de você, no mesmo andar.
+  const candidatos = [...PONTOS_RONDA, PONTOS.recomecoTerreo, PONTOS.recomeco1andar, PONTOS.origemFiscal]
+    .filter((c) => mesmoAndar(c, pj))
+    .map((c) => ({ c, d: Math.hypot(c.x - pj.x, c.z - pj.z) }));
+  const bons = candidatos.filter((x) => x.d >= 10 && x.d <= 22).sort((a, b) => Math.abs(a.d - 14) - Math.abs(b.d - 14));
+  const escolha = (bons[0] ?? candidatos.sort((a, b) => b.d - a.d)[0])?.c ?? PONTOS.origemFiscal;
+  fiscal.voltarParaOrigem(escolha);
+  fiscal.perseguir(DURACAO_PERSEGUICAO);
+  perseg = { ativa: true, ultimo: { ...pj }, busca: null, abrindo: 0, alarme: 0 };
+  ui.alerta(true);
+  audio.tocar('susto');
+  ui.aviso('PERSEGUIÇÃO! Ele está correndo atrás de você. Fuja ou se esconda!', 4);
+}
+
+function terminarPerseguicao(sobreviveu) {
+  perseg.ativa = false;
+  fiscal.pararPerseguicao();
+  ui.alerta(false);
+  if (sobreviveu) {
+    fiscal.tregua(12);
+    cacador.cacando = 0;
+    ui.aviso('Ele desistiu... por enquanto.', 3);
+  }
+}
+
+// Alvo do Fiscal na perseguição: você (se te vê) → último lugar onde te viu → vasculhar esconderijos perto.
+function alvoNaPerseguicao(pj, fp, dt) {
+  const seguro = clock.minutos() < 240 && SALAS_SEGURAS.includes(regiaoDe(pj));
+  const meVe = !escondido && !seguro && mesmoAndar(fp, pj) && temVisao(fp, pj, PAREDES);
+  if (meVe) { perseg.ultimo = { ...pj }; perseg.busca = null; perseg.abrindo = 0; return pj; }
+  if (!perseg.busca) {
+    if (Math.hypot(fp.x - perseg.ultimo.x, fp.z - perseg.ultimo.z) > 0.8) return perseg.ultimo;
+    perseg.busca = ESCONDERIJOS
+      .filter((e) => !e.seguro && mesmoAndar(e.fora, perseg.ultimo) && !(seguro && SALAS_SEGURAS.includes(regiaoDe(e.fora))))
+      .map((e) => ({ e, d: Math.hypot(e.fora.x - perseg.ultimo.x, e.fora.z - perseg.ultimo.z) }))
+      .filter((x) => x.d < 10).sort((a, b) => a.d - b.d).slice(0, 3).map((x) => x.e);
+  }
+  const alvo = perseg.busca[0];
+  if (!alvo) return cacador.ronda;
+  if (Math.hypot(fp.x - alvo.fora.x, fp.z - alvo.fora.z) > 0.6) return alvo.fora;
+  // Chegou no esconderijo: para, abre, segue para o próximo.
+  if (perseg.abrindo <= 0) { perseg.abrindo = 1.5; abrirEsconderijo(alvo); }
+  perseg.abrindo -= dt;
+  if (perseg.abrindo <= 0) perseg.busca.shift();
+  return fp;
 }
 
 function usarEscada(chegada, de) {
@@ -595,7 +808,8 @@ addEventListener('keydown', (e) => {
   if (m) usarItem(Number(m[1]) - 1);
 });
 addEventListener('keyup', (e) => { if (e.code === 'KeyE') acaoFim(); if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') shift = false; });
-addEventListener('keydown', (e) => { if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') shift = true; });
+addEventListener('keydown', (e) => { if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') shift = true; if (e.code === 'Space' && escondido) { prendendoAr = true; e.preventDefault(); } });
+addEventListener('keyup', (e) => { if (e.code === 'Space') prendendoAr = false; });
 addEventListener('blur', () => { shift = false; });
 canvas.addEventListener('click', () => { if (modo === 'jogando') travarMouse(); });
 ui.onItem((i) => { if (modo === 'jogando' && !pausado && !(ui.ocupado() && !perguntaAberta)) usarItem(i); });
@@ -635,10 +849,14 @@ function perder() {
       mundo.portaCabine01.rotation.y = cabineAberta ? 1.3 : 0;
       ferramentas.restaurar(checkpointExtra.ferramenta);
       votos = new Set(checkpointExtra.votos);
-      checkpointExtra.pendentes.forEach((v) => entrarVisitante(v, true));
+      checkpointExtra.pendentes.forEach((p) => { entrarVisitante(p.v, true); visitantes[visitantes.length - 1].estado = p.estado; });
     }
     atualizarMao();
+    if (checkpointExtra?.favores) favores.restaurar(checkpointExtra.favores);
+    escondido = null; jogador.definirAltura(); ui.respiracao(null); controlesToque?.mostrarRespirar(false);
+    perseg = { ativa: false, ultimo: null, busca: null, abrindo: 0, alarme: 0 }; ui.alerta(false);
     sincronizarPocas();
+    sincronizarFavores();
     folego.restaurar({ valor: 5, cansado: false });
     aparicao.visible = false; susto = null; apagao = 0; telefoneTocando = 0;
     jogador.teleportar(PONTOS.inicio);
@@ -686,8 +904,9 @@ function atualizar(dt, t) {
   const ocupado = ui.ocupado();
   if (efeitos.leite) { efeitos.leite.segundos -= dt; if (efeitos.leite.segundos <= 0) efeitos.leite = null; }
   if (vendoMonitor > 0) vendoMonitor -= dt;
-  const podeMexer = !ocupado && vendoMonitor <= 0;
-  if (controlesToque) { const o = controlesToque.consumirOlhar(); if (podeMexer) jogador.girar(o.dx, o.dy); }
+  const podeOlhar = !ocupado && vendoMonitor <= 0;
+  const podeMexer = podeOlhar && !escondido;
+  if (controlesToque) { const o = controlesToque.consumirOlhar(); if (podeOlhar) jogador.girar(o.dx, o.dy); }
   const analogico = controlesToque?.entrada();
   const querCorrer = (shift || (analogico && Math.hypot(analogico.lado, analogico.frente) > 0.95)) && !segurando && podeMexer;
   correndo = folego.update(dt, querCorrer, andouAntes);
@@ -703,7 +922,7 @@ function atualizar(dt, t) {
 
   if (perguntaAberta) {
     const r = quiz.tick(dt);
-    perguntaAberta?.controles.tempo(quiz.restante() / 5);
+    perguntaAberta?.controles.tempo(quiz.restante() / quiz.limite());
     if (r === 'tempo') fecharPergunta(false);
   } else if (!ocupado) {
     clock.tick(dt);
@@ -715,14 +934,39 @@ function atualizar(dt, t) {
   // Fiscal
   const pj = jogador.posicao();
   const minuto = clock.minutos();
-  const escondido = cabineAberta && pj.x > CABINE_01.minX && pj.x < CABINE_01.maxX && pj.z > CABINE_01.minZ && pj.z < CABINE_01.maxZ;
-  if (!ocupado && !escondido && noite.fase() !== 'vitoria') {
-    const fp = fiscal.posicao();
-    const pelaCamera = vendoMonitor > 0 && ['corredor_1', 'hall_1'].includes(regiaoDe(fp));
-    const olhando = pelaCamera || (mesmoAndar(pj, fp) && jogador.olhandoPara(fp, paredesAtuais()));
-    const r = fiscal.update(dt, { minuto, jogador: pj, alvo: alvoDoFiscal(pj, minuto, dt), olhando });
+  const fpAntes = fiscal.posicao();
+  if (!ocupado && noite.fase() !== 'vitoria') {
+    const pelaCamera = vendoMonitor > 0 && ['corredor_1', 'hall_1'].includes(regiaoDe(fpAntes));
+    const olhando = !escondido && (pelaCamera || (mesmoAndar(pj, fpAntes) && jogador.olhandoPara(fpAntes, paredesAtuais())));
+    const alvo = perseg.ativa ? alvoNaPerseguicao(pj, fpAntes, dt) : (escondido ? cacador.ronda : alvoDoFiscal(pj, minuto, dt));
+    // Escondido, ele não te alcança andando: só te acha vasculhando ou ouvindo sua respiração.
+    const r = fiscal.update(dt, { minuto, jogador: escondido ? { x: 1e6, z: 1e6 } : pj, alvo, olhando });
     if (r === 'alcancou' && fiscal.visivel(minuto)) abrirPergunta(false);
+    if (perseg.ativa && !fiscal.perseguindo() && !perguntaAberta) terminarPerseguicao(true);
   }
+  if (perseg.ativa) { perseg.alarme -= dt; if (perseg.alarme <= 0) { audio.tocar('alarme'); perseg.alarme = 1.2; } }
+
+  // Respiração no esconderijo.
+  if (escondido && !perguntaAberta) {
+    const fq = fiscal.posicao();
+    const pertoDele = !escondido.seguro && fiscal.visivel(minuto) && mesmoAndar(fq, pj) && Math.hypot(fq.x - pj.x, fq.z - pj.z) < 4;
+    const segurandoAr = prendendoAr || (controlesToque?.prendendoAr() ?? false);
+    const r = respiracao.update(dt, { escondido: true, fiscalPerto: pertoDele, segurando: segurandoAr });
+    if (respiracao.precisaSegurar()) ui.respiracao(segurandoAr ? 'Segurando o ar...' : `Ele está perto! ${TOQUE ? 'Segure "Prender o ar"' : 'Segure ESPAÇO'}`, respiracao.frac(), !segurandoAr);
+    else ui.respiracao(`Escondido · ${TOQUE ? 'botão de ação' : 'E'} para sair`, respiracao.frac(), false);
+    if (r === 'achou') { audio.tocar('suspiro'); encontrado(); }
+  }
+
+  // Favor da Mamãe Falou: filmar o Fiscal de perto.
+  if (favores.estado('mamae_falou') === 'pedido' && !favores.podeEntregar('mamae_falou', {}) && !escondido) {
+    const fq = fiscal.posicao();
+    if (fiscal.visivel(minuto) && mesmoAndar(fq, pj) && Math.hypot(fq.x - pj.x, fq.z - pj.z) <= 6 && jogador.olhandoPara(fq, paredesAtuais())) {
+      favores.filmar(dt);
+      if (!segurando) ui.progresso('Filmando o Fiscal pra Mamãe Falou', favores.fracFilmagem());
+      if (favores.podeEntregar('mamae_falou', {})) { ui.progresso(null); ui.aviso('Filmagem pronta! Volte para a Mamãe Falou.', 3); }
+    } else if (!segurando) ui.progresso(null);
+  }
+
   const fp = fiscal.posicao();
   fiscalMesh.visible = fiscal.visivel(minuto) && !aparicao.visible;
   fiscalMesh.position.set(fp.x, 0, fp.z);
@@ -730,12 +974,20 @@ function atualizar(dt, t) {
   const andou = Math.hypot(fp.x - ultimaPosFiscal.x, fp.z - ultimaPosFiscal.z);
   ultimaPosFiscal = fp;
   if (andou > 1e-4 && andou < 5) {
-    animarAndando(fiscalMesh, t);
+    animarAndando(fiscalMesh, perseg.ativa ? t * 1.8 : t);
     tempoPasso -= dt;
     if (tempoPasso <= 0 && mesmoAndar(fp, pj) && Math.hypot(fp.x - pj.x, fp.z - pj.z) < 9) { audio.tocar('passo_molhado'); tempoPasso = 0.7; }
-    // Ele deixa poças pelo caminho.
-    tempoPoca -= dt;
-    if (tempoPoca <= 0 && regiaoDe(fp)) { if (noite.adicionarPoca(fp)) sincronizarPocas(); tempoPoca = POCA_A_CADA; }
+    // Passando por uma porta de banheiro, ele interdita com fita.
+    tempoFita -= dt;
+    if (tempoFita <= 0 && !perseg.ativa) {
+      for (const [porta, f] of Object.entries(FITAS)) {
+        if (Math.hypot(fp.x - f.ponto.x, fp.z - f.ponto.z) < 2.5 && noite.adicionarFita(porta)) {
+          sincronizarPocas(); tempoFita = FITA_A_CADA;
+          if (mesmoAndar(fp, pj) && Math.hypot(fp.x - pj.x, fp.z - pj.z) < 14) audio.tocar('fita');
+          break;
+        }
+      }
+    }
   } else animarParado(fiscalMesh, t);
 
   if (telefoneTocando > 0) {
@@ -753,6 +1005,7 @@ function atualizar(dt, t) {
   tempoHud -= dt;
   if (tempoHud <= 0) {
     tempoHud = 0.25;
+    sincronizarTarefas(); // fitas e problemas novos aparecem sempre
     const it = !ocupado && !perguntaAberta && !segurando ? interacaoAtual() : null;
     ui.dica(segurando ? null : it?.texto ? `${it.texto}${it.tarefa ? ' (segure)' : ''}` : null);
     controlesToque?.rotuloAcao(ui.ocupado() && !perguntaAberta ? 'Continuar' : it?.texto ?? null);
@@ -764,6 +1017,10 @@ function atualizar(dt, t) {
     const segRestantes = hora < 6 && noite.relatorio()[hora] === null
       ? Math.ceil((60 - (clock.minutos() % 60)) * (SEGUNDOS_POR_HORA / 60)) : 0;
     const extras = efeitos.mostrarRota ? [`Mapa: Fiscal em ${nomeSala(regiaoDe(fp)) || '???'}`] : [];
+    if (perseg.ativa) extras.unshift(`PERSEGUIÇÃO! Ele está atrás de você.`);
+    for (const v of visitantes) if (favores.estado(v.v.id) === 'pedido') extras.push(`Favor — ${v.v.nome}: ${resumoFavor(v.v.id)}`);
+    const levando = favores.carregando().map((id) => Object.values(FAVORES).find((f) => f.objeto?.id === id)?.objeto.nome).filter(Boolean);
+    if (levando.length) extras.push(`Levando: ${levando.join(', ')}`);
     ui.hud({
       relogio: clock.formatar(),
       restante: segRestantes ? `fim da hora em ${Math.floor(segRestantes / 60)}:${String(segRestantes % 60).padStart(2, '0')}` : '',
@@ -842,6 +1099,8 @@ window.__jogo = {
     tarefas: noite.tarefas().map((x) => `${x.id}:${x.feita ? 1 : 0}`), segurando, correndo, folego: folego.frac(),
   }),
   comecar, abrirPergunta, pegarFerramenta, acaoInicio, acaoFim, lerPagina,
+  favores, comecarPerseguicao, entrarEsconderijo, sairEsconderijo, perseg: () => perseg, escondido: () => escondido?.id ?? null,
+  prenderAr: (v) => { prendendoAr = v; },
   correr: (v) => { shift = v; },
   proximoAlvo, regiaoDe,
   interagir: () => { const it = interacaoAtual(); if (it?.acao) it.acao(); return it?.texto ?? null; },

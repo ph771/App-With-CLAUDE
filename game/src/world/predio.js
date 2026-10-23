@@ -89,6 +89,7 @@ export function criarPredio(scene, { instanciar = () => null } = {}) {
   const verdeCabine = lambert({ map: tex.portaCabine() });
   const loucas = lambert({ color: 0xe8e6de });
   let portaCabine01 = null;
+  const portasCabines = {}; // `${sala}|${numero}` → pivô da porta (o Fiscal abre ao vasculhar)
   for (const c of CABINES) {
     const largura = c.x2 - c.x1 - 0.06;
     const pivo = new THREE.Group();
@@ -99,6 +100,8 @@ export function criarPredio(scene, { instanciar = () => null } = {}) {
     const eh01 = c.sala === 'masc_t' && c.numero === 1;
     pivo.rotation.y = eh01 ? 0 : 0.5 + 0.25 * c.numero;
     scene.add(pivo);
+    portasCabines[`${c.sala}|${c.numero}`] = pivo;
+    pivo.userData.fechada = pivo.rotation.y;
     if (eh01) portaCabine01 = pivo;
     const cx = (c.x1 + c.x2) / 2;
     if (!por('toilet', { x: cx, z: c.z1 + 0.45, rot: 0, altura: 0.8 })) {
@@ -110,6 +113,7 @@ export function criarPredio(scene, { instanciar = () => null } = {}) {
 
   // Móveis.
   const espelhos = [];
+  let portaArmario = null;
   const madeiraClara = lambert({ color: 0x7a5530 });
   for (const m of MOVEIS) {
     switch (m.tipo) {
@@ -131,6 +135,15 @@ export function criarPredio(scene, { instanciar = () => null } = {}) {
           break;
         }
         caixa(scene, m, 0.7, m.altura, madeiraClara); caixa(scene, { minX: m.minX + 0.1, maxX: m.minX + 0.2, minZ: m.minZ + 0.1, maxZ: m.minZ + 0.2 }, 0, 0.7, madeiraClara); caixa(scene, { minX: m.maxX - 0.2, maxX: m.maxX - 0.1, minZ: m.maxZ - 0.2, maxZ: m.maxZ - 0.1 }, 0, 0.7, madeiraClara); break;
+      case 'armario': {
+        const corpo = caixa(scene, m, 0, m.altura, lambert({ color: 0x5a6466 }));
+        // Porta com frestas, virada para dentro do almoxarifado (lado oeste).
+        const porta = caixa(scene, { minX: m.minX - 0.03, maxX: m.minX, minZ: m.minZ + 0.05, maxZ: m.maxZ - 0.05 }, 0.05, m.altura - 0.05, lambert({ color: 0x6f7a7c }));
+        for (let y = 1.5; y < 1.9; y += 0.08) caixa(scene, { minX: m.minX - 0.04, maxX: m.minX - 0.03, minZ: m.minZ + 0.25, maxZ: m.maxZ - 0.25 }, y, y + 0.02, lambert({ color: 0x111111 }));
+        portaArmario = { porta, corpo, frestas: [] };
+        scene.children.slice(-6).forEach((o) => { if (o !== porta && o !== corpo) portaArmario.frestas.push(o); });
+        break;
+      }
       case 'balcao': {
         const x = (m.minX + m.maxX) / 2;
         let ok = true;
@@ -257,7 +270,8 @@ export function criarPredio(scene, { instanciar = () => null } = {}) {
   }
 
   return {
-    luzes, espelhos, portaCabine01, telefone, ferramentas,
+    luzes, espelhos, portaCabine01, portasCabines, telefone, ferramentas,
+    portaArmario: () => portaArmario,
     monitor: { alvo: alvoMonitor, camera: cameraMonitor, tela },
     escreverPainel,
   };

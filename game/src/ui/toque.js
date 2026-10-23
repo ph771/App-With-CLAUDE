@@ -10,7 +10,8 @@ export function criarControlesToque(antesDe) {
     <div class="toque-olhar"></div>
     <div class="toque-joy"><div class="toque-joy-base"><div class="toque-joy-pino"></div></div></div>
     <button class="toque-acao" type="button" aria-label="Ação">E</button>
-    <button class="toque-pausa" type="button" aria-label="Pausar">II</button>`;
+    <button class="toque-pausa" type="button" aria-label="Pausar">II</button>
+    <button class="toque-respirar oculto" type="button">Prender o ar</button>`;
   antesDe.before(camada);
 
   const joy = camada.querySelector('.toque-joy');
@@ -19,6 +20,10 @@ export function criarControlesToque(antesDe) {
   const olhar = camada.querySelector('.toque-olhar');
   const botaoAcao = camada.querySelector('.toque-acao');
   const botaoPausa = camada.querySelector('.toque-pausa');
+  const botaoRespirar = camada.querySelector('.toque-respirar');
+  let prendendo = false;
+  botaoRespirar.addEventListener('pointerdown', (e) => { e.preventDefault(); prendendo = true; });
+  for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) botaoRespirar.addEventListener(ev, () => { prendendo = false; });
 
   let vetor = { lado: 0, frente: 0 };
   let dedoJoy = null, centro = null;
@@ -84,6 +89,8 @@ export function criarControlesToque(antesDe) {
       botaoAcao.classList.toggle('com-texto', Boolean(texto));
     },
     mostrar(v) { camada.classList.toggle('oculto', !v); },
+    mostrarRespirar(v) { botaoRespirar.classList.toggle('oculto', !v); if (!v) prendendo = false; },
+    prendendoAr: () => prendendo,
     zerar() { vetor = { lado: 0, frente: 0 }; acumulado = { dx: 0, dy: 0 }; dedoJoy = dedoOlhar = null; pino.style.transform = ''; },
   };
 }

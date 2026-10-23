@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { HORAS, TAREFA_FINAL } from '../src/data/noite.js';
-import { PAREDES, PORTA_CABINE_01 } from '../src/world/planta.js';
+import { PAREDES, PORTA_CABINE_01, ESCONDERIJOS } from '../src/world/planta.js';
 import { regiaoDe } from '../src/world/nav.js';
 import { FAVORES } from '../src/data/favores.js';
 
@@ -41,5 +41,14 @@ test('objetos dos favores ficam em lugares alcançáveis', () => {
     if (f.tipo !== 'pegar') continue;
     assert.ok(regiaoDe(f.objeto.ponto), `${id}: fora de sala`);
     assert.ok(alcancavel(f.objeto.ponto), `${id}: inalcançável`);
+  }
+});
+
+test('todo esconderijo tem entrada alcançável e fica numa sala', () => {
+  assert.ok(ESCONDERIJOS.length >= 13);
+  for (const e of ESCONDERIJOS) {
+    assert.ok(regiaoDe(e.fora), `${e.id}: fora de sala`);
+    assert.ok(alcancavel(e.fora), `${e.id}: entrada inalcançável`);
+    assert.ok(regiaoDe(e.dentro), `${e.id}: dentro fora de sala`);
   }
 });

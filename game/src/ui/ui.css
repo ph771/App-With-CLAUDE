@@ -181,3 +181,20 @@ body.toque .folego { bottom: calc(110px + env(safe-area-inset-bottom, 0px)); }
   padding: calc(6px + env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) 6px max(16px, env(safe-area-inset-left, 0px));
 }
 .faixa-versao .botao { margin: 0 0 0 0.6em; font-size: 0.9em; padding: 0.1em 0.8em; }
+
+/* ---------- Esconderijo e perseguição ---------- */
+.respiracao { position: absolute; left: 50%; bottom: 22%; transform: translateX(-50%); width: min(22em, 70vw); text-align: center; }
+.respiracao .barra { height: 10px; background: rgba(0,0,0,0.6); border: 1px solid var(--borda); margin-top: 4px; }
+.respiracao .barra div { height: 100%; background: #9fd3ff; }
+.respiracao.perigo .rotulo { color: var(--perigo); }
+.respiracao.perigo .barra div { background: var(--perigo); }
+.alerta-vermelho { position: fixed; inset: 0; pointer-events: none; opacity: 0; box-shadow: inset 0 0 160px 40px rgba(220, 20, 20, 0.75); }
+.alerta-vermelho.ativo { animation: alerta 0.9s ease-in-out infinite alternate; }
+@keyframes alerta { from { opacity: 0.25; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .alerta-vermelho.ativo { animation: none; opacity: 0.7; } }
+.toque-respirar { position: absolute; right: calc(110px + env(safe-area-inset-right, 0px)); bottom: calc(22px + env(safe-area-inset-bottom, 0px)); height: 76px; padding: 0 16px; border-radius: 38px; font-family: var(--fonte); font-size: 20px; color: var(--texto); border: 2px solid #9fd3ff; background: rgba(8, 10, 9, 0.75); }
+
+/* Espiando pelas frestas do armário */
+.frestas { position: fixed; inset: 0; pointer-events: none;
+  background: repeating-linear-gradient(180deg, #050606 0, #050606 26px, transparent 26px, transparent 44px),
+              radial-gradient(ellipse at center, transparent 30%, #050606 85%); }

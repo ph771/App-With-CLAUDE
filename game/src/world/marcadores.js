@@ -23,7 +23,27 @@ function caixinhaNaParede(g, cor, y, larg = 0.18, alt = 0.22) {
 }
 
 // O "problema" de cada tarefa, pelo id/ferramenta.
+// Fita zebrada "INTERDITADO" cruzando a porta (porta numa parede horizontal, 1 m de largura).
+let texturaFita = null;
+function fita(g) {
+  if (!texturaFita) {
+    const c = document.createElement('canvas'); c.width = 256; c.height = 32;
+    const x = c.getContext('2d');
+    for (let i = -32; i < 256; i += 32) { x.fillStyle = '#f2c200'; x.fillRect(i, 0, 16, 32); x.fillStyle = '#111'; x.fillRect(i + 16, 0, 16, 32); }
+    x.fillStyle = 'rgba(242,194,0,0.92)'; x.fillRect(40, 6, 176, 20);
+    x.fillStyle = '#111'; x.font = 'bold 16px Arial'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText('INTERDITADO', 128, 17);
+    texturaFita = new THREE.CanvasTexture(c); texturaFita.colorSpace = THREE.SRGBColorSpace;
+  }
+  const mat = new THREE.MeshBasicMaterial({ map: texturaFita, side: THREE.DoubleSide });
+  for (const [y, rot] of [[1.5, 0.45], [1.5, -0.45], [0.9, 0.08], [2.0, -0.06]]) {
+    const faixa = new THREE.Mesh(new THREE.PlaneGeometry(1.35, 0.14), mat);
+    faixa.position.set(0, y, 0); faixa.rotation.z = rot;
+    g.add(faixa);
+  }
+}
+
 function problema(g, t) {
+  if (t.fita) { fita(g); return; }
   if (t.id === 'pano_portaria') { g.add(criarPoca()); pegadas(g); return; }
   if (t.poca || t.id === 'pano_vip') { g.add(criarPoca()); return; }
   if (t.ferramenta === 'desentupidor') {

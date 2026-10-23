@@ -42,6 +42,9 @@ export const SUSTOS = [
   { minuto: 320, id: 'fiscal_espelho' },
 ];
 export const TELEFONEMAS = [{ minuto: 30, id: 'telefone_mudo' }];
+// Perseguições: 10 min (do relógio do jogo) depois do início das horas 02, 04 e 05. Duram 35 s reais.
+export const PERSEGUICOES = [130, 250, 310];
+export const DURACAO_PERSEGUICAO = 35;
 
 export const FERRAMENTAS = {
   esfregao: 'Esfregão e balde',

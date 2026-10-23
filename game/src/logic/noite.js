@@ -1,7 +1,7 @@
 // A noite (Versão B): cada hora tem tarefas. Feitas a tempo = APROVADO no relatório;
 // o tempo da hora acabou com algo pendente = REPROVADO. Às 06:00, entregar o relatório.
 import { VISITANTES } from '../data/visitantes.js';
-import { HORAS, TAREFA_FINAL, SUSTOS, TELEFONEMAS, FITAS, FITAS_MAX } from '../data/noite.js';
+import { HORAS, TAREFA_FINAL, SUSTOS, TELEFONEMAS, FITAS, FITAS_MAX, PERSEGUICOES } from '../data/noite.js';
 
 export { SUSTOS };
 
@@ -9,6 +9,7 @@ const AGENDA = [
   ...VISITANTES.map((v) => ({ chave: `visitante:${v.id}`, minuto: v.minuto, evento: { tipo: 'visitante', visitante: v } })),
   ...SUSTOS.map((s) => ({ chave: `susto:${s.id}`, minuto: s.minuto, evento: { tipo: 'susto', id: s.id } })),
   ...TELEFONEMAS.map((t) => ({ chave: `telefone:${t.id}`, minuto: t.minuto, evento: { tipo: 'telefone', id: t.id } })),
+  ...PERSEGUICOES.map((m) => ({ chave: `perseguicao:${m}`, minuto: m, evento: { tipo: 'perseguicao' } })),
 ].sort((a, b) => a.minuto - b.minuto);
 
 const novaTarefa = (t) => ({ ...t, feita: false, progresso: 0 });

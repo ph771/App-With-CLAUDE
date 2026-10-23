@@ -76,3 +76,21 @@ export function criarPoca() {
   m.position.y = 0.012;
   return m;
 }
+
+// Objetos dos favores dos visitantes, no chão ou em cima de móveis.
+export function criarObjetoFavor(id) {
+  const g = new THREE.Group();
+  g.name = id;
+  switch (id) {
+    case 'cafe': g.add(bloco(0.16, 0.22, 0.08, 0x6b3a1a, 0, 0.11, 0)); g.add(bloco(0.17, 0.06, 0.09, 0xd8c070, 0, 0.16, 0)); break;
+    case 'caneca': g.add(cilindro(0.06, 0.12, 0xf2f2f2, 0, 0.06, 0)); break;
+    case 'celular': g.add(bloco(0.08, 0.012, 0.15, 0x111111, 0, 0.006, 0)); g.add(bloco(0.07, 0.002, 0.13, 0x3a6aa0, 0, 0.013, 0)); break;
+    case 'peruca_nicolas': g.add(bloco(0.28, 0.12, 0.28, 0xd9b85c, 0, 0.06, 0)); g.add(bloco(0.22, 0.08, 0.1, 0xd9b85c, 0, 0.05, 0.16)); break;
+    case 'leite_condensado': g.add(cilindro(0.05, 0.1, 0x2f6fc0, 0, 0.05, 0)); g.add(cilindro(0.051, 0.03, 0xf0f0f0, 0, 0.06, 0)); break;
+  }
+  // Brilho discreto para dar para achar no escuro.
+  const brilho = new THREE.PointLight(0xfff0c0, 0.6, 1.6, 2);
+  brilho.position.y = 0.3;
+  g.add(brilho);
+  return g;
+}

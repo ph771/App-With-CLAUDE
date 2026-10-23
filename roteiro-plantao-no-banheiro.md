@@ -119,7 +119,7 @@ descrições físicas confiáveis, só os detalhes marcados como "confirmado".
 
 | Personagem | Detalhes para a caricatura |
 |---|---|
-| Fiscal Pavonato | Jovem (cerca de 28 anos). Terno barato, prancheta, crachá. Usa perucas nas esquetes dele (confirmado pela CartaCapital), então ele pode trocar de peruca entre as aparições. Rosto, cabelo e barba: **a conferir por foto**. |
+| Fiscal Pavonato | **Conferido pela foto enviada.** Jovem, rosto arredondado e liso, sem barba (só uma sombra leve). Cabelo castanho curto, um pouco mais alto em cima. Sobrancelhas retas e olhar fixo. Roupa típica: camiseta preta lisa, gola V ou redonda. Na caricatura: paletó barato e grande demais por cima da camiseta preta, prancheta e crachá. Usa perucas nas esquetes dele (CartaCapital), então pode trocar de peruca entre as aparições. |
 | Lulão | Barba e cabelo grisalhos, terno ou camisa vermelha. **A conferir por foto.** |
 | Mamãe Falou | Celular na mão, sempre filmando. Rosto e cabelo: **a conferir por foto**. |
 | Renan Santarém | Caneca na mão. Rosto e cabelo: **a conferir por foto**. |

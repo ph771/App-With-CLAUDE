@@ -1,0 +1,11 @@
+{
+  "name": "plantao-no-banheiro",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Paródia de terror e comédia em 1ª pessoa, no navegador.",
+  "scripts": {
+    "test": "node --test \"game/tests/*.test.js\"",
+    "start": "node game/tools/serve.js"
+  }
+}

@@ -95,3 +95,11 @@ test('snapshot e restaurar', () => {
   f.restaurar(s);
   assert.ok(Math.abs(f.posicao().x - 1.15) < 1e-6);
 });
+
+test('usa navegar para contornar paredes', () => {
+  // Navegação falsa: para chegar em qualquer lugar, passa antes por (0, 5).
+  const navegar = (p, alvo) => (p.z < 5 - 1e-9 && p.x < 1e-9 ? { x: 0, z: 5 } : alvo);
+  const f = createFiscal({ rota: [], origem, navegar });
+  passo(f, 4, { minuto: 130, jogador: { x: 30, z: 0 }, olhando: false });
+  assert.ok(Math.abs(f.posicao().x) < 1e-6 && Math.abs(f.posicao().z - 2) < 1e-6, JSON.stringify(f.posicao()));
+});

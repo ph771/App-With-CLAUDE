@@ -11,7 +11,7 @@ export function velocidadeBase(minuto) {
 
 const dist = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 
-export function createFiscal({ rota, origem }) {
+export function createFiscal({ rota, origem, navegar = (_p, alvo) => alvo }) {
   let s = inicial();
 
   function inicial() {
@@ -29,6 +29,16 @@ export function createFiscal({ rota, origem }) {
     return 0;
   }
 
+  // Anda rumo a `destino` seguindo a navegação (portas); devolve quanto sobrou.
+  function andarAte(destino, d) {
+    for (let i = 0; i < 8 && d > 1e-12; i++) {
+      const alvo = navegar(s.pos, destino);
+      d = andar(alvo, d);
+      if (alvo === destino || dist(s.pos, destino) < 1e-9) break;
+    }
+    return d;
+  }
+
   return {
     update(dt, { minuto, jogador, olhando }) {
       dt = Math.min(Math.max(dt, 0), 0.1);
@@ -44,7 +54,7 @@ export function createFiscal({ rota, origem }) {
       if (s.pausado > 0) { s.pausado = Math.max(0, s.pausado - dt); return null; }
 
       if (s.distracao) {
-        if (dist(s.pos, s.distracao) > 1e-9) { if (!olhando) andar(s.distracao, vel * dt); return null; }
+        if (dist(s.pos, s.distracao) > 1e-9) { if (!olhando) andarAte(s.distracao, vel * dt); return null; }
         s.esperaDistracao -= dt;
         if (s.esperaDistracao <= 0) s.distracao = null;
         return null;
@@ -53,10 +63,10 @@ export function createFiscal({ rota, origem }) {
       if (olhando) return null;
       let d = vel * dt;
       while (d > 1e-12 && s.indice < rota.length) {
-        d = andar(rota[s.indice], d);
+        d = andarAte(rota[s.indice], d);
         if (dist(s.pos, rota[s.indice]) < 1e-9) s.indice++;
       }
-      if (d > 1e-12) andar(jogador, d);
+      if (d > 1e-12) andarAte(jogador, d);
       return dist(s.pos, jogador) < DISTANCIA_ALCANCE ? 'alcancou' : null;
     },
     posicao: () => ({ ...s.pos }),

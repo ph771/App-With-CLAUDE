@@ -1,19 +1,26 @@
-// Plantão no Banheiro — ponto de entrada: liga a lógica da noite ao mundo 3D.
+// Plantão no Banheiro — Episódio 1: A Votação do Banheiro.
+// Liga a lógica da noite (tarefas, relatório, Fiscal, visitantes) ao prédio 3D.
 import * as THREE from 'three';
-import { criarBanheiro } from './world/banheiro.js';
+import { criarPredio } from './world/predio.js';
 import { criarJogador } from './world/jogador.js';
 import { criarRenderPS1 } from './world/ps1.js';
-import { PAREDES, PONTOS, CABINE_01 } from './world/planta.js';
+import {
+  PAREDES, PONTOS, CABINE_01, PORTA_CABINE_01, ESCADAS, FERRAMENTAS_LUGAR, LUGAR_VISITANTE, SALAS, andarDe,
+} from './world/planta.js';
 import { temVisao } from './world/fisica.js';
 import { criarPersonagem, animarParado, animarAndando, IDS_PERSONAGENS } from './world/personagens.js';
+import { criarFerramentaNaMao, criarPagina, criarPoca } from './world/objetos.js';
 import { proximoAlvo, regiaoDe } from './world/nav.js';
 import { createClock } from './logic/clock.js';
 import { createQuiz } from './logic/quiz.js';
 import { createFiscal } from './logic/fiscal.js';
 import { createInventario } from './logic/inventario.js';
 import { createNoite } from './logic/noite.js';
+import { createFerramentas } from './logic/ferramentas.js';
 import { PERGUNTAS, PERGUNTA_FINAL } from './data/perguntas.js';
 import { ITENS } from './data/visitantes.js';
+import { FERRAMENTAS } from './data/noite.js';
+import { PAGINAS } from './data/paginas.js';
 import { criarUI } from './ui/ui.js';
 import { criarAudio } from './audio.js';
 import { criarControlesToque } from './ui/toque.js';
@@ -23,6 +30,10 @@ const SEM_TRAVA = params.has('semtrava'); // testes automáticos: não pausa sem
 // Celular/tablet: controles de toque no lugar de teclado e mouse (?toque=1 força).
 const TOQUE = params.has('toque') || matchMedia('(pointer: coarse)').matches;
 if (TOQUE) document.body.classList.add('toque');
+// Duração máxima de cada hora (segundos reais). ?rapido=1 para testes.
+const SEGUNDOS_POR_HORA = Number(params.get('seghora')) || (params.has('rapido') ? 40 : 240);
+const POCA_A_CADA = 40; // segundos andando entre uma poça e outra do Fiscal
+const SALAS_SEGURAS = ['almox', 'hall_s', 'maquinas']; // o Fiscal não entra antes das 04:00
 
 // ---------- Mundo ----------
 const canvas = document.getElementById('tela');
@@ -34,18 +45,17 @@ const ps1 = criarRenderPS1(canvas, {
 ps1.redimensionar();
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x000000);
-scene.fog = new THREE.Fog(0x000000, 2, 11);
+scene.fog = new THREE.Fog(0x000000, 3, 16);
 scene.add(camera);
 
-const mundo = criarBanheiro(scene);
+const mundo = criarPredio(scene);
 const efeitos = { lanterna: false, cabine01: false, mostrarRota: false, leite: null };
 let cabineAberta = false;
-const paredesAtuais = () => (cabineAberta ? PAREDES : [...PAREDES, mundo.paredeCabine01]);
+const paredesAtuais = () => (cabineAberta ? PAREDES : [...PAREDES, PORTA_CABINE_01]);
 const controlesToque = TOQUE ? criarControlesToque(document.getElementById('ui')) : null;
 const jogador = criarJogador(camera, canvas, paredesAtuais, PONTOS.inicio, { entrada: controlesToque?.entrada });
-// Trava o mouse no computador; no celular não existe.
 const travarMouse = () => { if (!SEM_TRAVA && !TOQUE) jogador.travar(); };
-jogador.olharPara({ x: 0, z: -2 });
+jogador.olharPara({ x: 0, z: 0 });
 
 const lanterna = new THREE.SpotLight(0xfff2d0, 0, 14, 0.45, 0.5, 1.2);
 lanterna.position.set(0, -0.1, 0);
@@ -56,13 +66,14 @@ const ui = criarUI(document.getElementById('ui'), { toque: TOQUE });
 const audio = criarAudio();
 
 // ---------- Lógica ----------
-const clock = createClock({ segundosPorHora: params.has('rapido') ? 10 : 180 });
+const clock = createClock({ segundosPorHora: SEGUNDOS_POR_HORA });
 const quiz = createQuiz({ perguntas: PERGUNTAS, final: PERGUNTA_FINAL });
 const fiscal = createFiscal({ rota: [], origem: PONTOS.origemFiscal, navegar: proximoAlvo });
 const inventario = createInventario();
 const noite = createNoite({ clock, fiscal, inventario, quiz });
+const ferramentas = createFerramentas();
 
-// ---------- Personagens ----------
+// ---------- Personagens e objetos ----------
 const fiscalMesh = criarPersonagem('fiscal');
 fiscalMesh.visible = false;
 scene.add(fiscalMesh);
@@ -71,19 +82,34 @@ aparicao.getObjectByName('peruca').visible = true;
 aparicao.visible = false;
 scene.add(aparicao);
 
+let maoMesh = null; // ferramenta na frente da câmera
+const paginasMesh = PAGINAS.map((pg) => {
+  const m = criarPagina();
+  m.position.set(pg.ponto.x, 0, pg.ponto.z);
+  m.rotation.y = pg.ponto.x * 0.7;
+  scene.add(m);
+  return m;
+});
+const paginasLidas = new Set(); // não volta na derrota
+const pocasMesh = new Map(); // id da tarefa → mesh
+
 let modo = 'inicio'; // inicio | jogando | derrota | fim
 let pausado = false;
 let perguntaAberta = null; // { final, controles }
-let visitantes = []; // { v, mesh, estado, alvo }
-let telefoneTocando = 0; // segundos restantes
+let visitantes = []; // { v, mesh, estado: 'esperando' | 'falando' | 'feito' }
+let votos = new Set();
+let telefoneTocando = 0;
 let proximoToque = 0;
 let apagao = 0;
-let susto = null; // { tipo, tempo, ... }
+let susto = null;
 let vendoMonitor = 0;
 let tempoPasso = 0;
+let tempoPoca = POCA_A_CADA;
+let segurando = null; // id da tarefa que está sendo feita (segurar E)
 let checkpointExtra = null;
 let ultimaPosFiscal = fiscal.posicao();
 let agendados = []; // { em: segundos de jogo, fn } — param na pausa e somem na derrota
+let nivelMedo = 0;
 
 function agendar(segundos, fn) { agendados.push({ em: segundos, fn }); }
 function rodarAgendados(dt) {
@@ -99,77 +125,108 @@ function descartar(obj) {
   });
 }
 
+const nomeSala = (id) => SALAS.find((s) => s.id === id)?.nome ?? '';
+const mesmoAndar = (a, b) => andarDe(a) === andarDe(b);
+const perto = (a, b, r) => Math.hypot(a.x - b.x, a.z - b.z) <= r;
+
+// ---------- Ferramenta na mão ----------
+function atualizarMao() {
+  if (maoMesh) { camera.remove(maoMesh); descartar(maoMesh); maoMesh = null; }
+  const id = ferramentas.naMao();
+  for (const [f, mesh] of Object.entries(mundo.ferramentas)) mesh.visible = f !== id;
+  if (id) { maoMesh = criarFerramentaNaMao(id); camera.add(maoMesh); }
+}
+
+function pegarFerramenta(id) {
+  const antes = ferramentas.naMao();
+  ferramentas.pegar(id);
+  atualizarMao();
+  audio.tocar('item');
+  const agora = ferramentas.naMao();
+  if (!agora) ui.aviso(`Você devolveu: ${FERRAMENTAS[id]}`, 2);
+  else ui.aviso(antes ? `Trocou ${FERRAMENTAS[antes]} por ${FERRAMENTAS[agora]}` : `Na mão: ${FERRAMENTAS[agora]}`, 2);
+}
+
 // ---------- Visitantes ----------
-// Onde cada visitante espera no hall (sem encostar no guichê nem nas paredes).
-const VAGAS = [
-  PONTOS.esperaVisitante, { x: -0.4, z: 1.6 }, { x: 2, z: 1.6 }, { x: -1.6, z: 1.6 },
-  { x: 3.2, z: 1.6 }, { x: 0.8, z: 2.8 }, { x: 2, z: 2.8 }, { x: 3.2, z: 2.8 },
-];
 function entrarVisitante(v, direto = false) {
+  const lugar = LUGAR_VISITANTE[v.id];
   const mesh = criarPersonagem(v.id);
-  const ocupadas = new Set(visitantes.filter((x) => x.estado !== 'saindo').map((x) => x.vaga));
-  const vaga = VAGAS.findIndex((_, i) => !ocupadas.has(i));
-  const espera = VAGAS[Math.max(vaga, 0)];
-  const inicio = direto ? espera : PONTOS.entradaVisitante;
-  mesh.position.set(inicio.x, 0, inicio.z);
+  mesh.position.set(lugar.x, 0, lugar.z);
   scene.add(mesh);
-  visitantes.push({ v, mesh, vaga, estado: direto ? 'esperando' : 'entrando', alvo: espera });
+  visitantes.push({ v, mesh, estado: 'esperando' });
   if (!direto) {
     audio.tocar('entrada');
-    ui.aviso(`Alguém entrou no banheiro: ${v.nome}`);
+    ui.aviso(`${v.nome} está esperando você: ${nomeSala(regiaoDe(lugar))}`, 4);
   }
 }
 
 function falarCom(vis) {
   vis.estado = 'falando';
-  ui.dialogo(vis.v.nome, vis.v.falas, () => {
+  ui.dialogo(vis.v.nome, [...vis.v.falas, vis.v.voto], () => {
     inventario.adicionar(vis.v.item);
+    votos.add(vis.v.id);
     audio.tocar('item');
     const it = ITENS[vis.v.item];
-    ui.aviso(`Você recebeu: ${it.nome} — ${it.dica}`, 4);
-    vis.estado = 'saindo';
-    vis.alvo = PONTOS.saidaVisitante;
+    ui.aviso(`Voto NÃO registrado (${votos.size}/8) · Você recebeu: ${it.nome} — ${it.dica}`, 4.5);
+    vis.estado = 'feito';
   });
 }
 
-function atualizarVisitantes(dt, t) {
+function atualizarVisitantes(t) {
   const pj = jogador.posicao();
   for (const vis of visitantes) {
-    const p = { x: vis.mesh.position.x, z: vis.mesh.position.z };
-    if (vis.estado === 'entrando' || vis.estado === 'saindo') {
-      const alvo = vis.estado === 'saindo' ? proximoAlvo(p, vis.alvo) : vis.alvo;
-      const dx = alvo.x - p.x, dz = alvo.z - p.z, d = Math.hypot(dx, dz);
-      const passo = Math.min(d, 1.3 * dt);
-      if (d > 0.01) {
-        vis.mesh.position.x += (dx / d) * passo;
-        vis.mesh.position.z += (dz / d) * passo;
-        vis.mesh.rotation.y = Math.atan2(dx, dz);
-        animarAndando(vis.mesh, t);
-      }
-      if (Math.hypot(vis.alvo.x - vis.mesh.position.x, vis.alvo.z - vis.mesh.position.z) < 0.05) {
-        if (vis.estado === 'entrando') vis.estado = 'esperando';
-        else { scene.remove(vis.mesh); descartar(vis.mesh); vis.removido = true; audio.tocar('descarga'); }
-      }
-    } else {
-      vis.mesh.rotation.y = Math.atan2(pj.x - p.x, pj.z - p.z);
-      animarParado(vis.mesh, t);
-    }
+    const p = vis.mesh.position;
+    vis.mesh.rotation.y = Math.atan2(pj.x - p.x, pj.z - p.z);
+    animarParado(vis.mesh, t);
   }
-  visitantes = visitantes.filter((v) => !v.removido);
+}
+
+// Na virada da hora, quem já falou com você vai embora.
+function dispensarVisitantes() {
+  for (const vis of visitantes.filter((v) => v.estado === 'feito')) { scene.remove(vis.mesh); descartar(vis.mesh); }
+  visitantes = visitantes.filter((v) => v.estado !== 'feito');
+}
+
+// ---------- Poças do Fiscal ----------
+function sincronizarPocas() {
+  const abertas = new Set(noite.tarefas().filter((t) => t.poca && !t.feita).map((t) => t.id));
+  for (const [id, m] of pocasMesh) if (!abertas.has(id)) { scene.remove(m); descartar(m); pocasMesh.delete(id); }
+  for (const t of noite.tarefas()) {
+    if (!t.poca || t.feita || pocasMesh.has(t.id)) continue;
+    const m = criarPoca();
+    m.position.x = t.ponto.x; m.position.z = t.ponto.z;
+    scene.add(m);
+    pocasMesh.set(t.id, m);
+  }
 }
 
 // ---------- Eventos da noite ----------
 function tratarEvento(e) {
   if (e.tipo === 'hora') {
+    dispensarVisitantes();
+    segurando = null;
     checkpointExtra = {
       efeitos: { ...efeitos, leite: null },
       cabineAberta,
-      pendentes: visitantes.filter((v) => v.estado !== 'saindo').map((v) => v.v),
+      ferramenta: ferramentas.snapshot(),
+      votos: new Set(votos),
+      pendentes: visitantes.map((v) => v.v),
     };
-    if (e.hora > 0 && e.hora < 6) ui.aviso(`${String(e.hora).padStart(2, '0')}:00`, 2);
+    sincronizarPocas();
+    if (e.hora > 0 && e.hora < 6) ui.aviso(`${String(e.hora).padStart(2, '0')}:00 — novas tarefas no relatório`, 3);
     if (e.hora === 6) {
-      ui.aviso('06:00 — Apague a luz no QUADRO DO DEPÓSITO para terminar o plantão!', 6);
+      ui.aviso('06:00 — Leve o relatório ao PAINEL DE VOTAÇÃO do plenário (1º andar)!', 6);
       ui.legenda('', '(o Fiscal não vai deixar barato)', 4);
+    }
+    return;
+  }
+  if (e.tipo === 'hora_concluida') {
+    ui.carimbo(e.hora, e.aprovado);
+    audio.tocar(e.aprovado ? 'acerto' : 'erro');
+    if (e.aprovado) {
+      // Espera conversa ou pergunta fechar antes de virar a hora.
+      const virar = () => { if (ui.ocupado() || perguntaAberta) agendar(0.5, virar); else noite.avancarHora(); };
+      agendar(2.2, virar);
     }
     return;
   }
@@ -196,11 +253,11 @@ function comecarSusto(id) {
   switch (id) {
     case 'porta_familia':
       audio.tocar('porta_bate');
-      susto = { tipo: id, tempo: 0.8 };
+      ui.legenda('', '(uma porta bateu em algum lugar do prédio)', 4);
       break;
     case 'fiscal_monitor':
       audio.tocar('passo_molhado');
-      ui.legenda('', '(Tem alguém parado na frente do banheiro feminino. Confira o monitor.)', 5);
+      ui.legenda('', '(Tem alguém parado no corredor dos gabinetes, lá em cima. Confira o monitor.)', 5);
       break;
     case 'fiscal_cabine':
       audio.tocar('susto'); ui.flash();
@@ -220,46 +277,55 @@ function comecarSusto(id) {
       audio.tocar('passo_molhado');
       ui.legenda('', '(tem alguém atrás de você)', 4);
       mostrarAparicao({ x: p.x - d.x * 1.3, z: p.z - d.z * 1.3 }, 8, false);
-      susto = { tipo: id, tempo: 8, aparicaoAte: 8, assustaAoOlhar: true };
+      susto = { tipo: id, aparicaoAte: 8, assustaAoOlhar: true };
       break;
     }
   }
 }
 
 function atualizarSustos(dt) {
-  if (!susto) return;
-  if (susto.tipo === 'porta_familia') {
-    susto.tempo -= dt;
-    mundo.portaFamilia.position.x = susto.tempo > 0 ? Math.sin(susto.tempo * 60) * 0.03 : 0;
+  if (!susto || susto.aparicaoAte === undefined) return;
+  susto.aparicaoAte -= dt;
+  if (susto.assustaAoOlhar && jogador.olhandoPara({ x: aparicao.position.x, z: aparicao.position.z }, paredesAtuais(), 30)) {
+    audio.tocar('susto'); ui.flash();
+    susto.assustaAoOlhar = false;
+    susto.aparicaoAte = Math.min(susto.aparicaoAte, 0.5);
   }
-  if (susto.aparicaoAte !== undefined) {
-    susto.aparicaoAte -= dt;
-    if (susto.assustaAoOlhar && jogador.olhandoPara({ x: aparicao.position.x, z: aparicao.position.z }, paredesAtuais(), 30)) {
-      audio.tocar('susto'); ui.flash();
-      susto.assustaAoOlhar = false;
-      susto.aparicaoAte = Math.min(susto.aparicaoAte, 0.5);
-    }
-    if (susto.aparicaoAte <= 0) { aparicao.visible = false; susto = null; }
-  } else if (susto.tipo === 'porta_familia' && susto.tempo <= 0) susto = null;
+  if (susto.aparicaoAte <= 0) { aparicao.visible = false; susto = null; }
 }
 
-// ---------- Luzes ----------
-function atualizarLuzes(dt, t) {
+// ---------- Luzes, espelhos e som ----------
+function atualizarLuzes(dt) {
   if (apagao > 0) apagao -= dt;
-  const apagado = apagao > 0;
+  const pj = jogador.posicao();
+  const andar = andarDe(pj);
+  const sala = regiaoDe(pj);
   for (const l of mundo.luzes) {
+    const doAndar = andarDe(l.luz.position) === andar;
     const tremor = Math.random() < 0.015 ? Math.random() * 0.6 : 1;
     const fraca = noite.fase() === 'final' ? 0.6 : 1;
-    l.luz.intensity = apagado ? 0 : l.base * tremor * fraca;
-    l.tubo.material.color.setScalar(apagado ? 0.05 : 0.95 * tremor);
+    const ligada = doAndar && !(apagao > 0);
+    l.luz.intensity = ligada ? l.base * tremor * fraca : 0;
+    l.tubo.material.color.setScalar(ligada ? 0.95 * tremor : 0.05);
   }
-  audio.volumeZumbido(apagado ? 0 : 1);
+  // Espelho só reflete quando você está na mesma sala (economiza o celular).
+  for (const e of mundo.espelhos) e.espelho.visible = regiaoDe(e.ponto) === sala;
   lanterna.intensity = efeitos.lanterna ? 12 : 0;
+}
+
+function atualizarSom(dt) {
+  const pj = jogador.posicao(), fp = fiscal.posicao();
+  const alvo = fiscal.visivel(clock.minutos()) && clock.minutos() >= 120 && mesmoAndar(pj, fp)
+    ? Math.max(0, 1 - Math.hypot(pj.x - fp.x, pj.z - fp.z) / 16) : 0;
+  nivelMedo += (alvo - nivelMedo) * Math.min(1, dt * 2);
+  audio.nivelAmbiente(nivelMedo, dt);
 }
 
 // ---------- Pergunta do Fiscal ----------
 function abrirPergunta(final = false) {
-  if (!final) jogador.olharPara(fiscal.posicao()); // na final ele já está atrás de você
+  segurando = null;
+  ui.progresso(null);
+  if (!final) jogador.olharPara(fiscal.posicao());
   audio.tocar('passo_molhado');
   const mostrada = quiz.iniciar(final);
   const extra = inventario.tem('peruca') ? '(Usar a peruca)' : null;
@@ -283,7 +349,7 @@ function fecharPergunta(segura) {
     ui.legenda('Fiscal Pavonato', '(sorri e anota alguma coisa na prancheta)', 3);
     fiscal.errou();
   }
-  fiscalMesh.getObjectByName('peruca').visible = Math.random() < 0.5; // troca de peruca entre aparições
+  fiscalMesh.getObjectByName('peruca').visible = Math.random() < 0.5;
   if (final && segura === false && !quiz.perdeu()) {
     agendar(1.8, () => { if (!perguntaAberta) abrirPergunta(true); });
     return;
@@ -292,25 +358,41 @@ function fecharPergunta(segura) {
 }
 
 function terminarNoite() {
-  noite.vencer();
+  const resultado = noite.vencer();
   modo = 'fim';
-  fiscalMesh.visible = false;
   aparicao.visible = false;
-  ui.escurecer(true);
+  fiscalMesh.visible = false;
+  mundo.escreverPainel(resultado === 'arquivado'
+    ? ['PL 24/2026', 'BANHEIRO FISCALIZADO', 'ARQUIVADO'] : ['PL 24/2026', 'BANHEIRO FISCALIZADO', 'APROVADO'],
+  resultado === 'arquivado' ? '#5aff7a' : '#ff3a2a');
+  jogador.olharPara({ x: 100, z: -20 });
   ui.mostrarHud(false);
   controlesToque?.mostrar(false);
   document.exitPointerLock?.();
+  audio.tocar(resultado === 'arquivado' ? 'acerto' : 'erro');
   setTimeout(() => {
-    ui.escurecer(false);
-    ui.vitoria(() => {
-      audio.tocar('telefone');
-      ui.posCreditos(() => location.reload());
-    });
-  }, 1600);
+    ui.escurecer(true);
+    setTimeout(() => {
+      ui.escurecer(false);
+      ui.vitoria(resultado, paginasLidas.size === PAGINAS.length, () => {
+        audio.tocar('telefone');
+        ui.posCreditos(() => location.reload());
+      });
+    }, 1600);
+  }, 2600);
 }
 
-// ---------- Itens ----------
-// A caneca voa até a primeira parede (ou até onde há chão).
+function comecarFinal() {
+  // O Fiscal aparece bem atrás de você, no plenário.
+  const p = jogador.posicao(), d = jogador.direcao();
+  fiscal.voltarParaOrigem();
+  fiscal.suspender(9999);
+  mostrarAparicao({ x: p.x - d.x * 1.1, z: p.z - d.z * 1.1 }, 9999, true);
+  audio.tocar('susto');
+  abrirPergunta(true);
+}
+
+// ---------- Itens dos visitantes ----------
 function limitarArremesso(de, para) {
   const d = Math.hypot(para.x - de.x, para.z - de.z);
   let ultimo = de;
@@ -345,8 +427,8 @@ function usarItem(indice) {
     caneca: 'Você jogou a caneca longe. CLANK!',
     ordem: 'Ordem de suspensão: o Fiscal sumiu por 30 segundos.',
     leite: 'Leite condensado: energia! Você corre mais rápido.',
-    chave: 'A chave da cabine 01 agora é sua.',
-    mapa: 'Mapa aberto: você sabe onde o Fiscal está.',
+    chave: 'A chave da cabine 01 (masculino do térreo) agora é sua.',
+    mapa: 'Mapa aberto: o relatório mostra onde o Fiscal está.',
   };
   if (id === 'caneca') audio.tocar('porta_bate');
   if (id === 'chave') { cabineAberta = true; mundo.portaCabine01.rotation.y = 1.3; }
@@ -354,86 +436,122 @@ function usarItem(indice) {
 }
 
 // ---------- Interação (E) ----------
-const perto = (a, b, r) => Math.hypot(a.x - b.x, a.z - b.z) <= r;
-
 function interacaoAtual() {
   const p = jogador.posicao();
   const opcoes = [];
+  const add = (ponto, raio, texto, extra) => {
+    if (perto(p, ponto, raio)) opcoes.push({ d: Math.hypot(p.x - ponto.x, p.z - ponto.z), texto, ...extra });
+  };
   for (const vis of visitantes) {
-    if (vis.estado !== 'esperando') continue;
-    const vp = { x: vis.mesh.position.x, z: vis.mesh.position.z };
-    if (perto(p, vp, 1.8)) opcoes.push({ d: Math.hypot(p.x - vp.x, p.z - vp.z), texto: `Falar com ${vis.v.nome}`, acao: () => falarCom(vis) });
+    if (vis.estado === 'esperando') add({ x: vis.mesh.position.x, z: vis.mesh.position.z }, 1.8, `Falar com ${vis.v.nome}`, { acao: () => falarCom(vis) });
   }
-  const tarefa = (id) => noite.tarefas().find((t) => t.id === id);
-  for (const it of mundo.interagiveis) {
-    if (!perto(p, it.pos, it.raio)) continue;
-    const d = Math.hypot(p.x - it.pos.x, p.z - it.pos.z);
-    const add = (texto, acao) => opcoes.push({ d, texto, acao });
-    if (it.id === 'telefone' && telefoneTocando > 0) add('Atender o telefone', atenderTelefone);
-    if (it.id === 'monitor') add('Conferir o monitor', () => {
-      vendoMonitor = 3; jogador.olharPara(PONTOS.monitor);
-      noite.concluirTarefa('conferir_monitor');
+  for (const t of noite.tarefas()) {
+    if (t.feita) continue;
+    if (ferramentas.podeFazer(t)) add(t.ponto, 1.5, t.texto, { tarefa: t.id });
+    else add(t.ponto, 1.5, `${t.texto} (precisa: ${FERRAMENTAS[t.ferramenta]})`, {
+      acao: () => ui.aviso(`Precisa de ${FERRAMENTAS[t.ferramenta]}. Pegue no ALMOXARIFADO (térreo).`, 3),
     });
-    if (it.id === 'poca' && !tarefa('passar_pano').feita) add('Passar pano', () => { audio.tocar('pano'); noite.concluirTarefa('passar_pano'); });
-    if ((it.id === 'papel_masc' || it.id === 'papel_fem') && !tarefa('repor_papel').feita) add('Repor o papel', () => { audio.tocar('papel'); noite.concluirTarefa('repor_papel'); });
-    if (it.id === 'quadro') {
-      if (noite.fase() === 'final') add('Apagar a luz', () => {
-        audio.tocar('interruptor');
-        mostrarAparicaoFinal();
-        abrirPergunta(true);
-      });
-      else add('Quadro de luz', () => ui.aviso('Ainda não. Só às 06:00.', 2));
-    }
-    if (it.id === 'cabine01') {
-      if (!cabineAberta) add('Cabine 01 (trancada)', () => ui.aviso(inventario.tem('chave') ? 'Use a chave (tecla do item).' : 'Trancada. Alguém deve ter a chave.', 2.5));
-    }
+  }
+  for (const [id, lugar] of Object.entries(FERRAMENTAS_LUGAR)) {
+    const naMao = ferramentas.naMao() === id;
+    add(lugar, 1.1, naMao ? `Devolver: ${FERRAMENTAS[id]}` : `Pegar: ${FERRAMENTAS[id]}`, { acao: () => pegarFerramenta(id) });
+  }
+  for (const e of ESCADAS) {
+    add(e.usarA, 1.2, e.rotuloA, { acao: () => usarEscada(e.b, e.usarB) });
+    add(e.usarB, 1.2, e.rotuloB, { acao: () => usarEscada(e.a, e.usarA) });
+  }
+  PAGINAS.forEach((pg, i) => {
+    if (!paginasLidas.has(i)) add(pg.ponto, 1.2, 'Ler página da prancheta', { acao: () => lerPagina(i) });
+  });
+  if (telefoneTocando > 0) add(PONTOS.guiche, 1.4, 'Atender o telefone', { acao: atenderTelefone });
+  if (!cabineAberta) {
+    add({ x: -18.8, z: -8.8 }, 1, 'Cabine 01 (trancada)', {
+      acao: () => ui.aviso(inventario.tem('chave') ? 'Use a chave (tecla do item).' : 'Trancada. Alguém deve ter a chave.', 2.5),
+    });
   }
   opcoes.sort((a, b) => a.d - b.d);
   return opcoes[0] ?? null;
 }
 
-function mostrarAparicaoFinal() {
-  // O Fiscal aparece bem atrás de você no depósito.
-  const p = jogador.posicao(), d = jogador.direcao();
-  fiscal.voltarParaOrigem();
-  fiscal.suspender(9999);
-  mostrarAparicao({ x: p.x - d.x * 1.1, z: p.z - d.z * 1.1 }, 9999, true);
-  jogador.olharPara({ x: p.x - d.x, z: p.z - d.z });
-  audio.tocar('susto');
+function usarEscada(chegada, de) {
+  segurando = null;
+  ui.escurecer(true);
+  audio.tocar('passo_molhado');
+  agendar(0.45, () => {
+    jogador.teleportar(chegada);
+    // Olha para longe da escada.
+    const dx = chegada.x - de.x, dz = chegada.z - de.z, n = Math.hypot(dx, dz) || 1;
+    jogador.olharPara({ x: chegada.x + (dx / n) * 5, z: chegada.z + (dz / n) * 5 });
+    ui.escurecer(false);
+    ui.aviso(nomeSala(regiaoDe(chegada)), 1.8);
+  });
+}
+
+function lerPagina(i) {
+  paginasLidas.add(i);
+  scene.remove(paginasMesh[i]);
+  audio.tocar('papel');
+  ui.dialogo(`Página da prancheta (${paginasLidas.size}/${PAGINAS.length})`, [PAGINAS[i].texto]);
 }
 
 function atenderTelefone() {
   telefoneTocando = 0;
   ui.legenda('Telefone', '(silêncio... só uma respiração do outro lado)', 3.5);
-  agendar(3.5, () => ui.legenda('Telefone', 'Alôôôô? ... É do banheiro? Tô indo aí fiscalizar.', 4.5));
+  agendar(3.5, () => ui.legenda('Telefone', 'Alôôôô? ... É da limpeza? Tô indo aí fiscalizar.', 4.5));
 }
 
-// ---------- Teclado e mouse ----------
+// Apertar E / botão de ação: tarefas são de segurar; o resto é na hora.
+function acaoInicio() {
+  if (modo !== 'jogando' || pausado) return;
+  if (ui.ocupado()) { if (!perguntaAberta) ui.tecla('KeyE'); return; }
+  const it = interacaoAtual();
+  if (!it) return;
+  if (it.tarefa) { segurando = it.tarefa; return; }
+  it.acao();
+}
+function acaoFim() { segurando = null; ui.progresso(null); }
+
+function atualizarSegurando(dt) {
+  if (!segurando) return;
+  const it = interacaoAtual();
+  if (!it || it.tarefa !== segurando || ui.ocupado()) { acaoFim(); return; }
+  const t = noite.tarefas().find((x) => x.id === segurando);
+  if (t.id === 'monitor') { if (vendoMonitor <= 0) jogador.olharPara(PONTOS.monitor); vendoMonitor = 0.3; }
+  const r = noite.progredir(segurando, dt);
+  ui.progresso(t.texto, r.frac);
+  if (!r.feita) return;
+  audio.tocar(t.ferramenta === 'esfregao' ? 'pano' : t.ferramenta === 'rolos' ? 'papel' : 'acerto');
+  acaoFim();
+  sincronizarPocas();
+  if (t.id === 'painel') { comecarFinal(); return; }
+  const faltam = noite.tarefas().filter((x) => !x.feita).length;
+  ui.aviso(faltam ? `✔ ${t.texto} — faltam ${faltam}` : '✔ Tudo feito nesta hora!', 2);
+}
+
+// ---------- Teclado, mouse e toque ----------
 addEventListener('keydown', (e) => {
   if (modo !== 'jogando' || pausado || e.repeat) return;
   if (ui.tecla(e.code)) { e.preventDefault(); return; }
-  if (ui.ocupado() && !perguntaAberta) return; // durante a conversa, só E avança
-  if (e.code === 'KeyE') { interacaoAtual()?.acao(); return; }
+  if (ui.ocupado() && !perguntaAberta) return;
+  if (e.code === 'KeyE') { acaoInicio(); return; }
   const m = /^Digit([1-8])$/.exec(e.code);
   if (m) usarItem(Number(m[1]) - 1);
 });
+addEventListener('keyup', (e) => { if (e.code === 'KeyE') acaoFim(); });
 canvas.addEventListener('click', () => { if (modo === 'jogando') travarMouse(); });
 ui.onItem((i) => { if (modo === 'jogando' && !pausado && !(ui.ocupado() && !perguntaAberta)) usarItem(i); });
 if (controlesToque) {
   controlesToque.mostrar(false);
-  controlesToque.onAcao(() => {
-    if (modo !== 'jogando' || pausado) return;
-    if (ui.ocupado()) { ui.tecla('KeyE'); return; } // avança a conversa
-    interacaoAtual()?.acao();
-  });
+  controlesToque.onAcao(acaoInicio, acaoFim);
   controlesToque.onPausa(() => {
     if (modo !== 'jogando') return;
     pausado = true;
+    acaoFim();
     controlesToque.zerar();
     ui.pausa(true, () => { pausado = false; ui.pausa(false); });
   });
 }
-jogador.onSoltar(() => { if (modo === 'jogando' && !SEM_TRAVA && !TOQUE) { pausado = true; ui.pausa(true); } });
+jogador.onSoltar(() => { if (modo === 'jogando' && !SEM_TRAVA && !TOQUE) { pausado = true; acaoFim(); ui.pausa(true); } });
 jogador.onTravar(() => { pausado = false; ui.pausa(false); });
 document.addEventListener('pointerlockerror', () => { if (modo === 'jogando' && !SEM_TRAVA && !TOQUE) { pausado = true; ui.pausa(true); } });
 
@@ -441,6 +559,7 @@ document.addEventListener('pointerlockerror', () => { if (modo === 'jogando' && 
 function perder() {
   modo = 'derrota';
   agendados = [];
+  acaoFim();
   if (perguntaAberta) { perguntaAberta.controles.fechar(); perguntaAberta = null; }
   audio.tocar('susto'); ui.flash();
   document.exitPointerLock?.();
@@ -454,11 +573,15 @@ function perder() {
       Object.assign(efeitos, checkpointExtra.efeitos);
       cabineAberta = checkpointExtra.cabineAberta;
       mundo.portaCabine01.rotation.y = cabineAberta ? 1.3 : 0;
+      ferramentas.restaurar(checkpointExtra.ferramenta);
+      votos = new Set(checkpointExtra.votos);
       checkpointExtra.pendentes.forEach((v) => entrarVisitante(v, true));
     }
+    atualizarMao();
+    sincronizarPocas();
     aparicao.visible = false; susto = null; apagao = 0; telefoneTocando = 0;
     jogador.teleportar(PONTOS.inicio);
-    jogador.olharPara({ x: 0, z: -2 });
+    jogador.olharPara({ x: 0, z: 0 });
     modo = 'jogando';
     ui.mostrarHud(true);
     controlesToque?.zerar();
@@ -472,6 +595,12 @@ let anterior = performance.now();
 let quadro = 0;
 let tempoHud = 0;
 
+function alvoDoFiscal(pj, minuto) {
+  // Antes das 04:00 o almoxarifado e o subsolo são seguros: ele espera na porta.
+  if (minuto < 240 && SALAS_SEGURAS.includes(regiaoDe(pj))) return PONTOS.portaAlmox;
+  return pj;
+}
+
 function atualizar(dt, t) {
   rodarAgendados(dt);
   if (modo !== 'jogando') return;
@@ -480,7 +609,9 @@ function atualizar(dt, t) {
   if (vendoMonitor > 0) vendoMonitor -= dt;
   const podeMexer = !ocupado && vendoMonitor <= 0;
   if (controlesToque) { const o = controlesToque.consumirOlhar(); if (podeMexer) jogador.girar(o.dx, o.dy); }
-  jogador.update(dt, efeitos.leite ? efeitos.leite.velocidade : 1, podeMexer);
+  const vel = (efeitos.leite ? efeitos.leite.velocidade : 1) * ferramentas.multVelocidade();
+  jogador.update(dt, vel, podeMexer);
+  atualizarSegurando(dt);
 
   if (perguntaAberta) {
     const r = quiz.tick(dt);
@@ -499,9 +630,10 @@ function atualizar(dt, t) {
   const escondido = cabineAberta && pj.x > CABINE_01.minX && pj.x < CABINE_01.maxX && pj.z > CABINE_01.minZ && pj.z < CABINE_01.maxZ;
   if (!ocupado && !escondido && noite.fase() !== 'vitoria') {
     const fp = fiscal.posicao();
-    const pelaCamera = vendoMonitor > 0 && ['corredor', 'hall'].includes(regiaoDe(fp));
-    const olhando = pelaCamera || jogador.olhandoPara(fp, paredesAtuais());
-    if (fiscal.update(dt, { minuto, jogador: pj, olhando }) === 'alcancou' && fiscal.visivel(minuto)) abrirPergunta(false);
+    const pelaCamera = vendoMonitor > 0 && ['corredor_1', 'hall_1'].includes(regiaoDe(fp));
+    const olhando = pelaCamera || (mesmoAndar(pj, fp) && jogador.olhandoPara(fp, paredesAtuais()));
+    const r = fiscal.update(dt, { minuto, jogador: pj, alvo: alvoDoFiscal(pj, minuto), olhando });
+    if (r === 'alcancou' && fiscal.visivel(minuto)) abrirPergunta(false);
   }
   const fp = fiscal.posicao();
   fiscalMesh.visible = fiscal.visivel(minuto) && !aparicao.visible;
@@ -509,35 +641,47 @@ function atualizar(dt, t) {
   fiscalMesh.rotation.y = Math.atan2(pj.x - fp.x, pj.z - fp.z);
   const andou = Math.hypot(fp.x - ultimaPosFiscal.x, fp.z - ultimaPosFiscal.z);
   ultimaPosFiscal = fp;
-  if (andou > 1e-4) {
+  if (andou > 1e-4 && andou < 5) {
     animarAndando(fiscalMesh, t);
     tempoPasso -= dt;
-    if (tempoPasso <= 0 && Math.hypot(fp.x - pj.x, fp.z - pj.z) < 9) { audio.tocar('passo_molhado'); tempoPasso = 0.7; }
+    if (tempoPasso <= 0 && mesmoAndar(fp, pj) && Math.hypot(fp.x - pj.x, fp.z - pj.z) < 9) { audio.tocar('passo_molhado'); tempoPasso = 0.7; }
+    // Ele deixa poças pelo caminho.
+    tempoPoca -= dt;
+    if (tempoPoca <= 0 && regiaoDe(fp)) { if (noite.adicionarPoca(fp)) sincronizarPocas(); tempoPoca = POCA_A_CADA; }
   } else animarParado(fiscalMesh, t);
 
-  // Telefone
   if (telefoneTocando > 0) {
     telefoneTocando -= dt; proximoToque -= dt;
-    if (proximoToque <= 0) { audio.tocar('telefone'); proximoToque = 2.5; }
+    if (proximoToque <= 0 && mesmoAndar(pj, PONTOS.guiche)) { audio.tocar('telefone'); proximoToque = 2.5; }
   }
 
-  atualizarVisitantes(dt, t);
+  atualizarVisitantes(t);
   atualizarSustos(dt);
-  atualizarLuzes(dt, t);
+  atualizarLuzes(dt);
+  atualizarSom(dt);
+  paginasMesh.forEach((m, i) => { if (!paginasLidas.has(i)) m.position.y = 0.02 + Math.sin(t * 2 + i) * 0.015; });
 
-  // Dica de interação e HUD (4 vezes por segundo)
   tempoHud -= dt;
   if (tempoHud <= 0) {
     tempoHud = 0.25;
-    const it = !ocupado && !perguntaAberta ? interacaoAtual() : null;
-    ui.dica(it?.texto ?? null);
+    const it = !ocupado && !perguntaAberta && !segurando ? interacaoAtual() : null;
+    ui.dica(segurando ? null : it?.texto ? `${it.texto}${it.tarefa ? ' (segure)' : ''}` : null);
     controlesToque?.rotuloAcao(ui.ocupado() && !perguntaAberta ? 'Continuar' : it?.texto ?? null);
     const itens = inventario.itens().map((id, i) => ({ tecla: i + 1, nome: ITENS[id].nome }));
-    const tarefas = noite.fase() === 'final'
-      ? [{ texto: 'Apagar a luz no quadro do depósito', feita: false }]
-      : noite.tarefas();
-    if (efeitos.mostrarRota) tarefas.push({ texto: `Mapa: Fiscal no ${(regiaoDe(fp) ?? '???').toUpperCase()}`, feita: false });
-    ui.hud({ relogio: clock.formatar(), itens, tarefas, erros: quiz.erros() });
+    const tarefas = noite.tarefas().map((x) => ({
+      ...x, precisa: x.ferramenta ? FERRAMENTAS[x.ferramenta] : null, temFerramenta: ferramentas.podeFazer(x),
+    }));
+    const hora = clock.hora();
+    const segRestantes = hora < 6 && noite.relatorio()[hora] === null
+      ? Math.ceil((60 - (clock.minutos() % 60)) * (SEGUNDOS_POR_HORA / 60)) : 0;
+    const extras = efeitos.mostrarRota ? [`Mapa: Fiscal em ${nomeSala(regiaoDe(fp)) || '???'}`] : [];
+    ui.hud({
+      relogio: clock.formatar(),
+      restante: segRestantes ? `fim da hora em ${Math.floor(segRestantes / 60)}:${String(segRestantes % 60).padStart(2, '0')}` : '',
+      itens, tarefas, erros: quiz.erros(), relatorio: noite.relatorio(), hora,
+      naMao: ferramentas.naMao() ? FERRAMENTAS[ferramentas.naMao()] : null,
+      votos: votos.size, paginas: paginasLidas.size, extras,
+    });
   }
 }
 
@@ -546,8 +690,8 @@ function loop(agora) {
   anterior = agora;
   const t = agora / 1000;
   if (modo === 'jogando' && !pausado) atualizar(dt, t);
-  if (modo === 'inicio') { animarParado(fiscalMesh, t); }
-  if (quadro++ % 3 === 0) ps1.renderEm(mundo.monitor.alvo, scene, mundo.monitor.camera);
+  // O monitor só é desenhado quando você está na portaria.
+  if (quadro++ % 3 === 0 && regiaoDe(jogador.posicao()) === 'portaria') ps1.renderEm(mundo.monitor.alvo, scene, mundo.monitor.camera);
   ps1.render(scene, camera);
   requestAnimationFrame(loop);
 }
@@ -555,19 +699,19 @@ function loop(agora) {
 // ?minuto=N começa a noite mais tarde (para testes).
 if (params.has('minuto')) {
   const alvo = Math.min(Number(params.get('minuto')) || 0, 360);
-  while (clock.minutos() < alvo) { clock.tick(0.1); noite.update().forEach(tratarEvento); }
+  while (clock.minutos() < alvo) { clock.tick(0.1); noite.update().filter((e) => e.tipo !== 'hora_concluida').forEach(tratarEvento); }
 }
 
 // ---------- Início ----------
 function comecar() {
   audio.iniciar();
-  audio.zumbidoLuz(true);
+  audio.ambiente(true);
   modo = 'jogando';
   ui.mostrarHud(true);
   noite.update().forEach(tratarEvento);
+  ui.legenda('', 'Às 06:00 vota-se o PL do Banheiro Fiscalizado. Deixe o relatório de limpeza perfeito para arquivar o projeto.', 7);
   if (controlesToque) {
     controlesToque.mostrar(true);
-    // Tela cheia e paisagem quando o celular deixa (pode recusar; o jogo segue igual).
     document.documentElement.requestFullscreen?.().then(() => screen.orientation?.lock?.('landscape')).catch(() => {});
   }
   travarMouse();
@@ -575,16 +719,15 @@ function comecar() {
 
 // ?galeria=1 mostra todos os personagens lado a lado (para conferir a aparência).
 if (params.has('galeria')) {
-  fiscalMesh.visible = false;
   IDS_PERSONAGENS.forEach((id, i) => {
     const p = criarPersonagem(id);
-    p.position.set(-3.6 + i * 0.9, 0, 1.2);
+    p.position.set(-3.6 + i * 0.9, 0, 3);
     scene.add(p);
   });
   const luz = new THREE.PointLight(0xffffff, 8, 10, 1.2);
-  luz.position.set(0, 2.6, 4);
+  luz.position.set(0, 2.6, 6);
   scene.add(luz);
-  jogador.teleportar({ x: 0, z: 5.6 });
+  jogador.teleportar({ x: 0, z: 7.4 });
   jogador.olharPara({ x: 0, z: 0 });
   modo = 'galeria';
 } else {
@@ -595,16 +738,22 @@ if (params.has('ver')) {
   const [x, z, ax, az] = params.get('ver').split(',').map(Number);
   jogador.teleportar({ x, z });
   jogador.olharPara({ x: ax, z: az });
+  for (const l of mundo.luzes) l.luz.intensity = andarDe(l.luz.position) === andarDe({ x, z }) ? l.base : 0;
 }
 requestAnimationFrame(loop);
 
 // Ganchos para testes automáticos.
 window.__jogo = {
-  clock, quiz, fiscal, inventario, noite, jogador, ui,
-  estado: () => ({ modo, pausado, fase: noite.fase(), minuto: clock.minutos(), perguntaAberta: !!perguntaAberta, visitantes: visitantes.map((v) => `${v.v.id}:${v.estado}`), itens: inventario.itens(), erros: quiz.erros() }),
-  comecar,
-  abrirPergunta,
-  interagir: () => interacaoAtual()?.acao(),
+  clock, quiz, fiscal, inventario, noite, jogador, ui, ferramentas,
+  estado: () => ({
+    modo, pausado, fase: noite.fase(), minuto: clock.minutos(), perguntaAberta: !!perguntaAberta,
+    visitantes: visitantes.map((v) => `${v.v.id}:${v.estado}`), itens: inventario.itens(), erros: quiz.erros(),
+    relatorio: noite.relatorio(), naMao: ferramentas.naMao(), votos: votos.size, paginas: paginasLidas.size,
+    tarefas: noite.tarefas().map((x) => `${x.id}:${x.feita ? 1 : 0}`), segurando,
+  }),
+  comecar, abrirPergunta, pegarFerramenta, acaoInicio, acaoFim, lerPagina,
+  proximoAlvo,
+  interagir: () => { const it = interacaoAtual(); if (it?.acao) it.acao(); return it?.texto ?? null; },
   interacao: () => interacaoAtual()?.texto ?? null,
   teleportar: (x, z) => jogador.teleportar({ x, z }),
   tecla: (code) => dispatchEvent(new KeyboardEvent('keydown', { code })),

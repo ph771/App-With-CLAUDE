@@ -83,7 +83,7 @@ function cortar([a, b], buracos) {
   return pedacos;
 }
 
-function paredesDaSala(s) {
+export function paredesDaSala(s) {
   const out = [];
   for (const z of [s.minZ, s.maxZ]) {
     const buracos = PORTAS.filter((d) => d.z !== undefined && Math.abs(d.z - z) < 1e-6).map((d) => [d.x1, d.x2]);

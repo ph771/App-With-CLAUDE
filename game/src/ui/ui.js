@@ -19,12 +19,14 @@ export function criarUI(root, { toque = false } = {}) {
     dica: el('div', 'dica oculto'),
     legenda: el('div', 'legenda oculto'),
     toast: el('div', 'toast oculto'),
+    progresso: el('div', 'progresso oculto', '<div class="rotulo"></div><div class="barra"><div></div></div>'),
+    carimbo: el('div', 'carimbo oculto'),
     flash: el('div', 'flash'),
     escuro: el('div', 'escuro'),
   };
   const hud = el('div', 'oculto');
-  for (const k of ['mira', 'tarefas', 'relogio', 'erros', 'itens', 'dica', 'legenda']) hud.append(camadas[k]);
-  root.append(hud, camadas.toast, camadas.flash, camadas.escuro, el('div', 'aviso-girar', 'Deite o celular<br>para jogar'));
+  for (const k of ['mira', 'tarefas', 'relogio', 'erros', 'itens', 'dica', 'legenda', 'progresso']) hud.append(camadas[k]);
+  root.append(hud, camadas.carimbo, camadas.toast, camadas.flash, camadas.escuro, el('div', 'aviso-girar', 'Deite o celular<br>para jogar'));
   let aoTocarItem = null;
   camadas.itens.addEventListener('click', (e) => {
     const b = e.target.closest('[data-i]');
@@ -65,9 +67,19 @@ export function criarUI(root, { toque = false } = {}) {
     mostrarHud(v) { hud.classList.toggle('oculto', !v); },
     onItem(cb) { aoTocarItem = cb; },
 
-    hud({ relogio, itens, tarefas, erros }) {
-      camadas.relogio.textContent = relogio;
-      camadas.tarefas.innerHTML = tarefas.map((t) => `<div class="${t.feita ? 'feita' : ''}">${t.feita ? '■' : '□'} ${esc(t.texto)}</div>`).join('');
+    // relatorio: 6 posições (null | 'aprovado' | 'reprovado'); tarefas com { texto, onde, feita, precisa, temFerramenta }.
+    hud({ relogio, restante, itens, tarefas, erros, relatorio = [], hora = 0, naMao = null, votos = 0, paginas = 0, extras = [] }) {
+      camadas.relogio.innerHTML = `${esc(relogio)}${restante ? `<small>${esc(restante)}</small>` : ''}`;
+      const carimbos = relatorio.map((r, i) => `<span class="selo ${r ?? (i === hora ? 'atual' : '')}">${String(i).padStart(2, '0')}${r === 'aprovado' ? '✔' : r === 'reprovado' ? '✖' : ''}</span>`).join('');
+      camadas.tarefas.innerHTML = `
+        <div class="titulo">RELATÓRIO DE LIMPEZA</div>
+        <div class="selos">${carimbos}</div>
+        ${tarefas.map((t) => `<div class="tarefa ${t.feita ? 'feita' : ''}">
+          <span class="caixinha">${t.feita ? '✔' : ''}</span>
+          <span class="txt">${esc(t.texto)}<small>${esc(t.onde ?? '')}${t.precisa ? ` · <b class="${t.temFerramenta ? 'ok' : 'falta'}">${esc(t.precisa)}</b>` : ''}</small></span>
+        </div>`).join('')}
+        <div class="rodape">Na mão: <b>${esc(naMao ?? 'nada')}</b> · Votos NÃO: <b>${votos}/8</b> · Páginas: <b>${paginas}/8</b></div>
+        ${extras.map((x) => `<div class="rodape">${esc(x)}</div>`).join('')}`;
       camadas.erros.innerHTML = [0, 1, 2].map((i) => `<span class="${i < erros ? '' : 'vazio'}">✕</span>`).join('');
       const html = itens.map((it, i) => `<button type="button" class="item" data-i="${i}"><b>${it.tecla}</b> ${esc(it.nome)}</button>`).join('');
       if (camadas.itens.innerHTML !== html) camadas.itens.innerHTML = html;
@@ -76,6 +88,22 @@ export function criarUI(root, { toque = false } = {}) {
     dica(texto) {
       camadas.dica.classList.toggle('oculto', !texto);
       if (texto) camadas.dica.innerHTML = `<b>[E]</b> ${esc(texto)}`;
+    },
+
+    // Barra de "segurar" (null esconde).
+    progresso(rotulo, frac) {
+      camadas.progresso.classList.toggle('oculto', rotulo === null);
+      if (rotulo === null) return;
+      camadas.progresso.querySelector('.rotulo').textContent = rotulo;
+      camadas.progresso.querySelector('.barra div').style.width = `${Math.round(frac * 100)}%`;
+    },
+
+    // Carimbo grande no fim de cada hora.
+    carimbo(hora, aprovado) {
+      camadas.carimbo.className = `carimbo ${aprovado ? 'aprovado' : 'reprovado'}`;
+      camadas.carimbo.innerHTML = `<div>HORA ${String(hora).padStart(2, '0')}</div><b>${aprovado ? 'APROVADO' : 'REPROVADO'}</b>`;
+      clearTimeout(camadas.carimbo._t);
+      camadas.carimbo._t = setTimeout(() => camadas.carimbo.classList.add('oculto'), 2400);
     },
 
     aviso(texto, segundos = 2.5) {
@@ -158,16 +186,25 @@ export function criarUI(root, { toque = false } = {}) {
         <p>Três respostas erradas. Ele anotou tudo na prancheta.</p>`, `Voltar para ${hora}`, onTentar);
     },
 
-    vitoria(onFim) {
-      telaCheia(`<h1>06:00</h1>
-        <p>O Fiscal fica parado, confuso... e se desfaz em papelada.</p>
+    // resultado: 'arquivado' (final bom) ou 'aprovado_pl' (final ruim). paginasTodas: achou as 8 páginas.
+    vitoria(resultado, paginasTodas, onFim) {
+      const bom = resultado === 'arquivado';
+      telaCheia(bom ? `<h1>PROJETO ARQUIVADO</h1>
+        <p>O painel do plenário pisca: <b>PL 24/2026 — ARQUIVADO</b>.</p>
+        <p>O Fiscal grita "Isso é uma TRANSgressão!"... e se desfaz em papelada.</p>
         <p>O sol nasce. A faxineira da manhã chega, olha a papelada no chão e suspira:</p>
-        <p><i>"Ah, ele de novo? Vem toda noite. Ninguém sabe quem contratou."</i></p>`, 'Ver créditos', () => {
+        <p><i>"Ah, ele de novo? Vem toda noite. Ninguém sabe quem contratou."</i></p>`
+        : `<h1 style="color:var(--perigo)">PROJETO APROVADO</h1>
+        <p>O relatório tinha horas REPROVADAS. O painel pisca: <b>PL 24/2026 — APROVADO</b>.</p>
+        <p>O Fiscal ajeita a peruca, carimba a própria nomeação e sorri:</p>
+        <p><i>"Fica criado o cargo de Fiscal de Banheiro. Vitalício. Com TRANSporte pago."</i></p>
+        <p class="controles">Dica: termine as tarefas de todas as horas a tempo para arquivar o projeto.</p>`, 'Ver créditos', () => {
         telaCheia(`<h1>PLANTÃO NO BANHEIRO</h1>
-          <p>Episódio 1 — A Ronda do Fiscal</p>
+          <p>Episódio 1 — A Votação do Banheiro</p>
           <p class="aviso-parodia">${esc(AVISO_PARODIA)}</p>
           <p class="controles">Fiscal Pavonato · Lulão · Mamãe Falou · Renan Santarém · Ministro Moraez<br>
-          Kim Katagiri · Nicolas Ferrer · Seu Jairo · Flávio "Zero Um" · A Faxineira</p>`, 'Continuar', onFim);
+          Kim Katagiri · Nicolas Ferrer · Seu Jairo · Flávio "Zero Um" · A Faxineira</p>
+          ${paginasTodas ? '<p><i>Você achou as 8 páginas da prancheta. Na última, escrito à mão: "Amanhã eu volto. Com um projeto sobre pias."</i></p>' : '<p class="controles">Ainda faltam páginas da prancheta escondidas pelo prédio.</p>'}`, 'Continuar', onFim);
       });
     },
 

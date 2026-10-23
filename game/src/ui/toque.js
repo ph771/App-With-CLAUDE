@@ -73,7 +73,11 @@ export function criarControlesToque(antesDe) {
   return {
     entrada: () => vetor,
     consumirOlhar() { const a = acumulado; acumulado = { dx: 0, dy: 0 }; return a; },
-    onAcao(cb) { botaoAcao.addEventListener('click', cb); },
+    // Ação: `aoApertar` ao encostar; `aoSoltar` ao tirar o dedo (tarefas de segurar).
+    onAcao(aoApertar, aoSoltar) {
+      botaoAcao.addEventListener('pointerdown', (e) => { e.preventDefault(); aoApertar(); });
+      for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) botaoAcao.addEventListener(ev, () => aoSoltar?.());
+    },
     onPausa(cb) { botaoPausa.addEventListener('click', cb); },
     rotuloAcao(texto) {
       botaoAcao.textContent = texto ?? 'E';

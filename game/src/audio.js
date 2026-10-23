@@ -1,6 +1,7 @@
 // Sons sintetizados com Web Audio (sem arquivos).
 export function criarAudio() {
-  let ctx = null, mestre = null, zumbido = null;
+  let ctx = null, mestre = null, zumbido = null, ambienteNos = null;
+  const volumeAmbiente = 1;
 
   function iniciar() {
     if (ctx) { if (ctx.state === 'suspended') ctx.resume(); return; }
@@ -74,6 +75,41 @@ export function criarAudio() {
       if (!ctx || !SONS[id]) return;
       SONS[id](ctx.currentTime + 0.01);
     },
+    // Ambiente de terror: drone grave e baixo. `nivel` (0 a 1) = quão perto o Fiscal está.
+    ambiente(ligado) {
+      if (!ctx) return;
+      if (ligado && !ambienteNos) {
+        const g = ctx.createGain(); g.gain.value = 0.0001; g.connect(mestre);
+        const filtro = ctx.createBiquadFilter(); filtro.type = 'lowpass'; filtro.frequency.value = 180; filtro.connect(g);
+        const oscs = [55, 58.3, 82.4].map((f, i) => {
+          const o = ctx.createOscillator(); o.type = i === 2 ? 'triangle' : 'sine'; o.frequency.value = f;
+          const og = ctx.createGain(); og.gain.value = i === 2 ? 0.25 : 0.6;
+          o.connect(og); og.connect(filtro); o.start(); return o;
+        });
+        const n = ruido(4); n.loop = true;
+        const nf = ctx.createBiquadFilter(); nf.type = 'bandpass'; nf.frequency.value = 400; nf.Q.value = 0.6;
+        const ng = ctx.createGain(); ng.gain.value = 0.08;
+        n.connect(nf); nf.connect(ng); ng.connect(g); n.start();
+        ambienteNos = { g, filtro, oscs, n, batida: 0 };
+      } else if (!ligado && ambienteNos) {
+        ambienteNos.oscs.forEach((o) => o.stop()); ambienteNos.n.stop(); ambienteNos = null;
+      }
+    },
+    nivelAmbiente(nivel, dt = 0) {
+      if (!ambienteNos) return;
+      const t = ctx.currentTime;
+      ambienteNos.g.gain.setTargetAtTime((0.05 + 0.13 * nivel) * volumeAmbiente, t, 0.4);
+      ambienteNos.filtro.frequency.setTargetAtTime(160 + 500 * nivel, t, 0.4);
+      // Coração acelera quando ele está muito perto.
+      if (nivel > 0.55) {
+        ambienteNos.batida -= dt;
+        if (ambienteNos.batida <= 0) {
+          tom(60, 'sine', t, 0.12, 0.35 * volumeAmbiente, 40); tom(55, 'sine', t + 0.16, 0.12, 0.25 * volumeAmbiente, 38);
+          ambienteNos.batida = 1.1 - nivel * 0.6;
+        }
+      }
+    },
+
     // Zumbido de lâmpada fluorescente, contínuo.
     zumbidoLuz(ligado) {
       if (!ctx) return;

@@ -109,3 +109,35 @@ body.toque .pergunta .respostas button { padding: 8px 12px; }
 }
 body.toque .dialogo { width: calc(100vw - 2 * (150px + env(safe-area-inset-left, 0px))); min-width: 0; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
 body.toque .legenda { bottom: 6em; width: calc(100vw - 320px); }
+
+/* ---------- Relatório de limpeza ---------- */
+.hud-tarefas { width: min(30em, 46vw); }
+.hud-tarefas .titulo { color: var(--destaque); letter-spacing: 0.08em; }
+.hud-tarefas .selos { display: flex; gap: 4px; margin: 2px 0 6px; flex-wrap: wrap; }
+.hud-tarefas .selo { border: 1px solid #555; padding: 0 4px; color: var(--apagado); font-size: 0.85em; }
+.hud-tarefas .selo.atual { border-color: var(--destaque); color: var(--destaque); }
+.hud-tarefas .selo.aprovado { border-color: #4caf50; color: #7fdc7f; }
+.hud-tarefas .selo.reprovado { border-color: var(--perigo); color: var(--perigo); }
+.hud-tarefas .tarefa { display: flex; gap: 8px; align-items: flex-start; margin: 3px 0; }
+.hud-tarefas .tarefa .caixinha { flex: none; width: 1em; height: 1em; border: 2px solid var(--texto); display: grid; place-items: center; font-size: 0.8em; color: #7fdc7f; margin-top: 0.15em; }
+.hud-tarefas .tarefa .txt { min-width: 0; }
+.hud-tarefas .tarefa small { display: block; color: var(--apagado); font-size: 0.8em; }
+.hud-tarefas .tarefa.feita .txt { color: var(--apagado); text-decoration: line-through; }
+.hud-tarefas .tarefa.feita .caixinha { border-color: #4caf50; }
+.hud-tarefas b.falta { color: var(--destaque); font-weight: normal; }
+.hud-tarefas b.ok { color: #7fdc7f; font-weight: normal; }
+.hud-tarefas .rodape { margin-top: 6px; font-size: 0.8em; color: var(--apagado); }
+.hud-tarefas .rodape b { color: var(--texto); font-weight: normal; }
+.hud-relogio small { display: block; font-size: 0.4em; text-align: right; color: var(--apagado); text-shadow: none; }
+
+.progresso { position: absolute; left: 50%; top: 60%; transform: translateX(-50%); width: min(22em, 70vw); text-align: center; }
+.progresso .barra { height: 10px; background: rgba(0,0,0,0.6); border: 1px solid var(--borda); margin-top: 4px; }
+.progresso .barra div { height: 100%; background: var(--destaque); }
+
+.carimbo { position: absolute; left: 50%; top: 34%; transform: translate(-50%, -50%) rotate(-8deg); border: 5px solid; padding: 6px 22px; text-align: center; background: rgba(0,0,0,0.55); font-size: 1.4em; letter-spacing: 0.1em; animation: carimbar 0.25s ease-out; }
+.carimbo b { display: block; font-size: 2em; }
+.carimbo.aprovado { color: #7fdc7f; border-color: #4caf50; }
+.carimbo.reprovado { color: var(--perigo); border-color: var(--perigo); }
+@keyframes carimbar { from { transform: translate(-50%, -50%) rotate(-8deg) scale(1.8); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .carimbo { animation: none; } }
+body.toque .hud-tarefas { width: min(24em, 42vw); max-height: 60vh; overflow: hidden; }

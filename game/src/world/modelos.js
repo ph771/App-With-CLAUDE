@@ -7,7 +7,7 @@ const cache = {};
 
 export async function carregarModelos(nomes) {
   const loader = new GLTFLoader();
-  await Promise.all(nomes.map((n) => loader.loadAsync(`assets/modelos/${n}.glb`)
+  await Promise.all(nomes.map((n) => loader.loadAsync(`assets/modelos/${n}.json`)
     .then((g) => { cache[n] = g.scene; })
     .catch(() => { /* sem o modelo, o prédio usa a caixa simples */ })));
 }

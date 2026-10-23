@@ -109,3 +109,17 @@ test('pausado não alcança o jogador, mesmo perto', () => {
   assert.equal(passo(f, 2, { minuto: 130, jogador: { x: 1, z: 0 }, olhando: false }), null);
   assert.equal(passo(f, 2, { minuto: 130, jogador: { x: 1, z: 0 }, olhando: false }), 'alcancou');
 });
+
+test('teleporte da navegação (escada) pula na hora', () => {
+  const navegar = (p, alvo) => (p.x < 50 ? (Math.hypot(p.x - 1, p.z) < 0.3 ? { x: 100, z: 0, teleporte: true } : { x: 1, z: 0 }) : alvo);
+  const f = createFiscal({ rota: [], origem, navegar });
+  passo(f, 4, { minuto: 130, jogador: { x: 103, z: 0 }, olhando: false });
+  assert.ok(f.posicao().x >= 100, JSON.stringify(f.posicao()));
+});
+
+test('alvo separado: anda até o alvo mas alcança pelo jogador', () => {
+  const f = createFiscal({ rota: [], origem });
+  passo(f, 4, { minuto: 130, jogador: { x: 30, z: 0 }, alvo: { x: 0, z: 1 }, olhando: false });
+  assert.ok(Math.abs(f.posicao().z - 1) < 1e-6 && Math.abs(f.posicao().x) < 1e-6);
+  assert.equal(f.update(0.1, { minuto: 130, jogador: { x: 0.5, z: 1 }, alvo: { x: 0, z: 1 }, olhando: false }), 'alcancou');
+});

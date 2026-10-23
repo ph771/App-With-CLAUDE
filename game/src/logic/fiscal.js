@@ -23,6 +23,7 @@ export function createFiscal({ rota, origem, navegar = (_p, alvo) => alvo }) {
 
   // Anda até `alvo` gastando até `d` metros; devolve quanto sobrou.
   function andar(alvo, d) {
+    if (alvo.teleporte) { s.pos = { x: alvo.x, z: alvo.z }; return d; } // escada
     const falta = dist(s.pos, alvo);
     if (falta <= d) { s.pos = { x: alvo.x, z: alvo.z }; return d - falta; }
     s.pos = { x: s.pos.x + ((alvo.x - s.pos.x) / falta) * d, z: s.pos.z + ((alvo.z - s.pos.z) / falta) * d };
@@ -40,7 +41,8 @@ export function createFiscal({ rota, origem, navegar = (_p, alvo) => alvo }) {
   }
 
   return {
-    update(dt, { minuto, jogador, olhando }) {
+    // `alvo` (opcional): para onde andar; o alcance é sempre medido até o `jogador`.
+    update(dt, { minuto, jogador, olhando, alvo }) {
       dt = Math.min(Math.max(dt, 0), 0.1);
       const hora = Math.floor(minuto / 60);
       // O bônus de velocidade por erro dura até a hora acabar.
@@ -66,7 +68,7 @@ export function createFiscal({ rota, origem, navegar = (_p, alvo) => alvo }) {
         d = andarAte(rota[s.indice], d);
         if (dist(s.pos, rota[s.indice]) < 1e-9) s.indice++;
       }
-      if (d > 1e-12) andarAte(jogador, d);
+      if (d > 1e-12) andarAte(alvo ?? jogador, d);
       return dist(s.pos, jogador) < DISTANCIA_ALCANCE ? 'alcancou' : null;
     },
     posicao: () => ({ ...s.pos }),

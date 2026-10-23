@@ -107,18 +107,19 @@ export function criarUI(root) {
     },
 
     // Pergunta do Fiscal: teclas 1, 2, 3 (ou clique). Devolve controles da barra de tempo.
-    pergunta({ fala, respostas }, onEscolha) {
+    pergunta({ fala, respostas, extra }, onEscolha) {
+      const opcoes = extra ? [...respostas, extra] : respostas;
       const caixa = el('div', 'pergunta', `
         <div class="nome">FISCAL PAVONATO</div>
         <div class="fala">${esc(fala)}</div>
-        <div class="respostas">${respostas.map((r, i) => `<button data-i="${i}"><b>${i + 1}.</b> ${esc(r)}</button>`).join('')}</div>
+        <div class="respostas">${opcoes.map((r, i) => `<button data-i="${i}"><b>${i + 1}.</b> ${esc(r)}</button>`).join('')}</div>
         <div class="barra"><div style="width:100%"></div></div>`);
       const fechar = () => { caixa.remove(); if (modal?.pergunta) modal = null; };
       const escolher = (i) => { fechar(); onEscolha(i); };
       caixa.querySelectorAll('button').forEach((b) => b.addEventListener('click', () => escolher(Number(b.dataset.i))));
       modal = {
         pergunta: true,
-        tecla(code) { const n = { Digit1: 0, Digit2: 1, Digit3: 2, Numpad1: 0, Numpad2: 1, Numpad3: 2 }[code]; if (n !== undefined) escolher(n); },
+        tecla(code) { const n = { Digit1: 0, Digit2: 1, Digit3: 2, Digit4: 3, Numpad1: 0, Numpad2: 1, Numpad3: 2, Numpad4: 3 }[code]; if (n !== undefined && n < opcoes.length) escolher(n); },
       };
       root.append(caixa);
       return {

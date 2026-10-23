@@ -33,7 +33,7 @@ export const VISITANTES = [
   {
     id: 'kim', nome: 'Kim Katagiri', minuto: 180, item: 'mapa',
     falas: [
-      '(se olha no espelho) ...Parem de me mandar esse meme.',
+      '(se olha na tela do celular) ...Parem de me mandar esse meme.',
       'Lá no meu trabalho é sempre assim: ninguém lê, ninguém trabalha, ninguém faz nada.',
       'Vocês ficam fazendo dancinha pra internet e não tem uma proposta pra mudar os banheiros do Brasil! Olha o estado dessa pia!',
       'Toma, fiz um mapa do caminho que ele faz. Ninguém mais ia fazer.',

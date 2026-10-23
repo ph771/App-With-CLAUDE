@@ -52,7 +52,7 @@ export function criarUI(root, { toque = false } = {}) {
   return {
     ocupado: () => modal !== null,
 
-    telaInicial(onJogar, onConfig) {
+    telaInicial(onJogar, onConfig, { versao, dicaIOS } = {}) {
       const t = telaCheia(`
         <h1>PLANTÃO NO BANHEIRO</h1>
         <h2>Episódio 1 — A Votação do Banheiro</h2>
@@ -69,9 +69,33 @@ export function criarUI(root, { toque = false } = {}) {
         b.addEventListener('click', onConfig);
         t.querySelector('.conteudo').append(b);
       }
+      t.classList.add('tela-inicial');
+      if (dicaIOS) t.querySelector('.conteudo').append(el('p', 'controles', 'Para instalar no iPhone: toque em Compartilhar e depois em <b>Adicionar à Tela de Início</b>.'));
+      if (versao) t.querySelector('.conteudo').append(el('p', 'versao', `versão ${esc(versao)}`));
     },
 
     mostrarHud(v) { hud.classList.toggle('oculto', !v); },
+
+    // Botão "Instalar jogo" na tela inicial (aparece quando o navegador deixa).
+    botaoInstalar(acao) {
+      const conteudo = root.querySelector('.tela-inicial .conteudo');
+      if (!conteudo || conteudo.querySelector('.instalar')) return;
+      const b = el('button', 'botao secundario instalar', 'Instalar jogo');
+      b.type = 'button';
+      b.addEventListener('click', async () => { if (await acao()) b.remove(); });
+      conteudo.querySelector('.botao').after(b);
+    },
+
+    // Faixa no topo: versão nova pronta.
+    versaoNova(aoAtualizar) {
+      if (root.querySelector('.faixa-versao')) return;
+      const f = el('div', 'faixa-versao', 'Nova versão do jogo disponível. ');
+      const b = el('button', 'botao', 'Atualizar agora');
+      b.type = 'button';
+      b.addEventListener('click', () => { b.disabled = true; b.textContent = 'Atualizando...'; aoAtualizar(); });
+      f.append(b);
+      root.append(f);
+    },
     onItem(cb) { aoTocarItem = cb; },
 
     // relatorio: 6 posições (null | 'aprovado' | 'reprovado'); tarefas com { texto, onde, feita, precisa, temFerramenta }.

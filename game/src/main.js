@@ -29,6 +29,8 @@ import { criarControlesToque } from './ui/toque.js';
 import { carregarConfig, salvarConfig, PADRAO as CONFIG_PADRAO } from './logic/config.js';
 import { definirAnisotropia } from './world/texturas.js';
 import { carregarModelos, instanciar, temModelo } from './world/modelos.js';
+import { criarInstalador } from './ui/instalar.js';
+import { VERSAO } from './versao.js';
 
 const params = new URLSearchParams(location.search);
 const SEM_TRAVA = params.has('semtrava'); // testes automáticos: não pausa sem o mouse travado
@@ -104,6 +106,12 @@ function abrirConfig() {
   ui.configuracoes(config, CONFIG_PADRAO, (c) => { config = c; aplicarConfig(c); salvarConfig(armazenamento, c); });
 }
 aplicarConfig(config);
+
+// App instalável: botão de instalar e aviso de versão nova (só funciona no endereço próprio do jogo).
+const instalador = criarInstalador({
+  aoPoderInstalar: () => { if (modo === 'inicio') ui.botaoInstalar(() => instalador.instalar()); },
+  aoTerVersaoNova: (atualizar) => ui.versaoNova(atualizar),
+});
 
 // ---------- Lógica ----------
 const clock = createClock({ segundosPorHora: SEGUNDOS_POR_HORA });
@@ -812,7 +820,8 @@ if (params.has('galeria')) {
   jogador.olharPara({ x: 0, z: 0 });
   modo = 'galeria';
 } else {
-  ui.telaInicial(comecar, abrirConfig);
+  ui.telaInicial(comecar, abrirConfig, { versao: VERSAO, dicaIOS: instalador.dicaIOS() });
+  if (instalador.podeInstalar()) ui.botaoInstalar(() => instalador.instalar());
 }
 // ?ver=x,z,alvoX,alvoZ posiciona a câmera (para prints de teste).
 if (params.has('ver')) {

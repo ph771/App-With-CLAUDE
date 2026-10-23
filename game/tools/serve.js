@@ -4,13 +4,15 @@ import { readFile } from 'node:fs/promises';
 import { extname, join, normalize, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const RAIZ = join(dirname(fileURLToPath(import.meta.url)), '..');
+// RAIZ=dist para testar a versão instalável.
+const RAIZ = process.env.RAIZ ? join(process.cwd(), process.env.RAIZ) : join(dirname(fileURLToPath(import.meta.url)), '..');
 const PORTA = Number(process.env.PORT) || 8080;
 const TIPOS = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
   '.png': 'image/png',
+  '.webmanifest': 'application/manifest+json',
   '.json': 'application/json',
   '.glb': 'model/gltf-binary',
   '.txt': 'text/plain; charset=utf-8',

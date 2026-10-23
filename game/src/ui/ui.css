@@ -172,3 +172,12 @@ body.toque .folego { bottom: calc(110px + env(safe-area-inset-bottom, 0px)); }
 @media (prefers-reduced-motion: reduce) { #efeitos-tela .grao { animation: none; } }
 #efeitos-tela.desligado { display: none; }
 #toque { z-index: 1; }
+
+/* ---------- App instalável ---------- */
+.versao { color: #5d6b5f; font-size: 0.7em; margin-top: 1.2em; }
+.faixa-versao {
+  position: fixed; left: 0; right: 0; top: 0; z-index: 4; pointer-events: auto; text-align: center;
+  background: #1c2a20; border-bottom: 2px solid var(--destaque);
+  padding: calc(6px + env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) 6px max(16px, env(safe-area-inset-left, 0px));
+}
+.faixa-versao .botao { margin: 0 0 0 0.6em; font-size: 0.9em; padding: 0.1em 0.8em; }

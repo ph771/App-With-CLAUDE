@@ -1,14 +1,34 @@
-// Texturas desenhadas em canvas (64×64), sem filtro: visual PS1.
+// Texturas desenhadas em canvas. O desenho é feito em 64×64 e ampliado para 256×256,
+// com uma camada de microdetalhe por cima (fica nítido em 1080p sem perder o estilo).
 import * as THREE from 'three';
 
-function canvasTextura(tam, desenhar, repetir = [1, 1]) {
+const RES = 256;
+let anisotropia = 4;
+export function definirAnisotropia(a) { anisotropia = a; }
+
+function microdetalhe(g, semente) {
+  let s = semente;
+  const rnd = () => ((s = (s * 16807) % 2147483647) / 2147483647);
+  for (let i = 0; i < 2600; i++) {
+    g.fillStyle = rnd() < 0.5 ? 'rgba(0,0,0,0.07)' : 'rgba(255,255,255,0.05)';
+    g.fillRect(Math.floor(rnd() * RES), Math.floor(rnd() * RES), 1 + Math.floor(rnd() * 2), 1);
+  }
+}
+
+function canvasTextura(tam, desenhar, repetir = [1, 1], semente = 3) {
   const c = document.createElement('canvas');
-  c.width = c.height = tam;
+  c.width = c.height = RES;
   const g = c.getContext('2d');
+  g.imageSmoothingEnabled = false;
+  g.save();
+  g.scale(RES / tam, RES / tam);
   desenhar(g, tam);
+  g.restore();
+  microdetalhe(g, semente);
   const t = new THREE.CanvasTexture(c);
-  t.magFilter = THREE.NearestFilter;
-  t.minFilter = THREE.NearestFilter;
+  t.magFilter = THREE.LinearFilter;
+  t.minFilter = THREE.LinearMipmapLinearFilter;
+  t.anisotropy = anisotropia;
   t.wrapS = t.wrapT = THREE.RepeatWrapping;
   t.repeat.set(...repetir);
   t.colorSpace = THREE.SRGBColorSpace;
@@ -20,7 +40,8 @@ function sujeira(g, tam, cor, qtd, semente = 7) {
   let s = semente;
   const rnd = () => ((s = (s * 16807) % 2147483647) / 2147483647);
   g.fillStyle = cor;
-  for (let i = 0; i < qtd; i++) g.fillRect(rnd() * tam, rnd() * tam, 1 + rnd() * 2, 1 + rnd() * 2);
+  // Pontos pequenos (a textura é ampliada 4x): mais pontos, menores.
+  for (let i = 0; i < qtd * 3; i++) g.fillRect(rnd() * tam, rnd() * tam, 0.25 + rnd() * 0.6, 0.25 + rnd() * 0.6);
 }
 
 export function azulejo() {
@@ -67,28 +88,48 @@ export function concreto() {
 }
 
 // Placa de texto (ex.: "MASCULINO", "CABINE 01").
-export function placa(texto, { fundo = '#1d3d6b', cor = '#ffffff', largura = 128, altura = 32 } = {}) {
+// Placa com texto. `aspecto` = largura ÷ altura da placa no mundo; o texto encolhe até caber.
+export function placa(texto, { fundo = '#1d3d6b', cor = '#ffffff', aspecto = 4 } = {}) {
+  const largura = 512, altura = Math.max(64, Math.round(largura / aspecto));
   const c = document.createElement('canvas');
   c.width = largura; c.height = altura;
   const g = c.getContext('2d');
   g.fillStyle = fundo; g.fillRect(0, 0, largura, altura);
-  g.fillStyle = cor; g.font = `bold ${Math.floor(altura * 0.55)}px monospace`;
-  g.textAlign = 'center'; g.textBaseline = 'middle';
-  g.fillText(texto, largura / 2, altura / 2 + 1);
+  g.strokeStyle = 'rgba(255,255,255,0.55)'; g.lineWidth = Math.max(3, altura * 0.05);
+  g.strokeRect(g.lineWidth, g.lineWidth, largura - 2 * g.lineWidth, altura - 2 * g.lineWidth);
+  let tamanho = Math.floor(altura * 0.58);
+  g.font = `bold ${tamanho}px "Arial Narrow", Arial, sans-serif`;
+  while (g.measureText(texto).width > largura * 0.88 && tamanho > 8) {
+    tamanho -= 2;
+    g.font = `bold ${tamanho}px "Arial Narrow", Arial, sans-serif`;
+  }
+  g.fillStyle = cor; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillText(texto, largura / 2, altura / 2 + 2);
   const t = new THREE.CanvasTexture(c);
-  t.magFilter = t.minFilter = THREE.NearestFilter;
+  t.magFilter = THREE.LinearFilter;
+  t.minFilter = THREE.LinearMipmapLinearFilter;
+  t.anisotropy = anisotropia;
   t.colorSpace = THREE.SRGBColorSpace;
   return t;
 }
 
 export function marmore() {
   return canvasTextura(64, (g, t) => {
-    g.fillStyle = '#d8d2c4'; g.fillRect(0, 0, t, t);
-    g.strokeStyle = 'rgba(120,110,95,0.55)'; g.lineWidth = 1;
+    const grad = g.createLinearGradient(0, 0, t, t);
+    grad.addColorStop(0, '#dcd6c8'); grad.addColorStop(1, '#cfc7b6');
+    g.fillStyle = grad; g.fillRect(0, 0, t, t);
+    // Veios suaves e curvos.
     let s = 17; const rnd = () => ((s = (s * 16807) % 2147483647) / 2147483647);
-    for (let i = 0; i < 6; i++) { g.beginPath(); g.moveTo(rnd() * t, 0); for (let y = 8; y <= t; y += 8) g.lineTo(rnd() * t, y); g.stroke(); }
-    g.fillStyle = 'rgba(40,30,20,0.6)'; g.fillRect(40, 10, 1, 30); g.fillRect(41, 28, 8, 1); // rachadura
-    g.fillStyle = '#a49c8a'; g.fillRect(0, 0, t, 1); g.fillRect(0, 0, 1, t);
+    g.lineCap = 'round';
+    for (let i = 0; i < 4; i++) {
+      g.strokeStyle = `rgba(110,100,85,${0.18 + rnd() * 0.2})`; g.lineWidth = 0.4 + rnd() * 0.6;
+      g.beginPath(); let x = rnd() * t, y = 0; g.moveTo(x, y);
+      while (y < t) { const nx = x + (rnd() - 0.5) * 14, ny = y + 6 + rnd() * 8; g.quadraticCurveTo(x + (rnd() - 0.5) * 10, (y + ny) / 2, nx, ny); x = nx; y = ny; }
+      g.stroke();
+    }
+    g.strokeStyle = 'rgba(40,30,20,0.55)'; g.lineWidth = 0.4; // rachadura
+    g.beginPath(); g.moveTo(40, 10); g.lineTo(41, 22); g.lineTo(47, 28); g.lineTo(46, 38); g.stroke();
+    g.fillStyle = 'rgba(120,112,98,0.6)'; g.fillRect(0, 0, t, 0.5); g.fillRect(0, 0, 0.5, t); // rejunte
   });
 }
 

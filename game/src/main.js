@@ -25,6 +25,8 @@ import { PAGINAS } from './data/paginas.js';
 import { criarUI } from './ui/ui.js';
 import { criarAudio } from './audio.js';
 import { criarControlesToque } from './ui/toque.js';
+import { carregarConfig, salvarConfig, PADRAO as CONFIG_PADRAO } from './logic/config.js';
+import { definirAnisotropia } from './world/texturas.js';
 
 const params = new URLSearchParams(location.search);
 const SEM_TRAVA = params.has('semtrava'); // testes automáticos: não pausa sem o mouse travado
@@ -40,10 +42,26 @@ const SALAS_SEGURAS = ['almox', 'hall_s', 'maquinas']; // o Fiscal não entra an
 const canvas = document.getElementById('tela');
 const camera = new THREE.PerspectiveCamera(70, 4 / 3, 0.05, 40);
 const ps1 = criarRenderPS1(canvas, {
-  preencher: TOQUE,
   aoMudarProporcao: (p) => { camera.aspect = p; camera.updateProjectionMatrix(); },
 });
-ps1.redimensionar();
+definirAnisotropia(Math.min(8, ps1.anisotropiaMaxima()));
+// Configurações guardadas neste navegador (se ele deixar).
+let armazenamento = null;
+try { armazenamento = window.localStorage; } catch { /* bloqueado */ }
+let config = carregarConfig(armazenamento);
+ps1.definirQualidade(config.qualidade);
+
+// Vinheta e granulação de filme por cima da imagem.
+const efeitosTela = document.createElement('div');
+efeitosTela.id = 'efeitos-tela';
+{
+  const c = document.createElement('canvas'); c.width = c.height = 128;
+  const g = c.getContext('2d'); const img = g.createImageData(128, 128);
+  for (let i = 0; i < img.data.length; i += 4) { const v = Math.random() * 255; img.data[i] = img.data[i + 1] = img.data[i + 2] = v; img.data[i + 3] = 255; }
+  g.putImageData(img, 0, 0);
+  efeitosTela.innerHTML = `<div class="grao" style="background-image:url(${c.toDataURL()})"></div><div class="vinheta"></div>`;
+}
+document.getElementById('ui').before(efeitosTela);
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x000000);
 scene.fog = new THREE.Fog(0x000000, 3, 16);
@@ -65,6 +83,18 @@ camera.add(lanterna, lanterna.target);
 
 const ui = criarUI(document.getElementById('ui'), { toque: TOQUE });
 const audio = criarAudio();
+
+function aplicarConfig(c) {
+  ps1.definirQualidade(c.qualidade);
+  camera.fov = c.fov; camera.updateProjectionMatrix();
+  audio.definirVolumes({ geral: c.volumeGeral, efeitos: c.volumeEfeitos, ambiente: c.volumeAmbiente });
+  jogador.ajustar({ sensMouse: c.sensMouse, sensToque: c.sensToque, inverterY: c.inverterY });
+  efeitosTela.classList.toggle('desligado', !c.efeitosTela);
+}
+function abrirConfig() {
+  ui.configuracoes(config, CONFIG_PADRAO, (c) => { config = c; aplicarConfig(c); salvarConfig(armazenamento, c); });
+}
+aplicarConfig(config);
 
 // ---------- Lógica ----------
 const clock = createClock({ segundosPorHora: SEGUNDOS_POR_HORA });
@@ -113,7 +143,7 @@ let checkpointExtra = null;
 let ultimaPosFiscal = fiscal.posicao();
 let agendados = []; // { em: segundos de jogo, fn } — param na pausa e somem na derrota
 let nivelMedo = 0;
-let shift = false, andouAntes = false, correndo = false;
+let shift = false, andouAntes = false, correndo = false, posTeste = null;
 
 function agendar(segundos, fn) { agendados.push({ em: segundos, fn }); }
 function rodarAgendados(dt) {
@@ -559,12 +589,13 @@ if (controlesToque) {
     pausado = true;
     acaoFim();
     controlesToque.zerar();
-    ui.pausa(true, () => { pausado = false; ui.pausa(false); });
+    ui.pausa(true, () => { pausado = false; ui.pausa(false); }, abrirConfig);
   });
 }
-jogador.onSoltar(() => { if (modo === 'jogando' && !SEM_TRAVA && !TOQUE) { pausado = true; acaoFim(); ui.pausa(true); } });
+// No computador, Esc solta o mouse e pausa; "Continuar" trava o mouse de novo.
+jogador.onSoltar(() => { if (modo === 'jogando' && !SEM_TRAVA && !TOQUE) { pausado = true; acaoFim(); ui.pausa(true, travarMouse, abrirConfig); } });
 jogador.onTravar(() => { pausado = false; ui.pausa(false); });
-document.addEventListener('pointerlockerror', () => { if (modo === 'jogando' && !SEM_TRAVA && !TOQUE) { pausado = true; ui.pausa(true); } });
+document.addEventListener('pointerlockerror', () => { if (modo === 'jogando' && !SEM_TRAVA && !TOQUE) { pausado = true; ui.pausa(true, travarMouse, abrirConfig); } });
 
 // ---------- Derrota e checkpoint ----------
 function perder() {
@@ -643,7 +674,12 @@ function atualizar(dt, t) {
   const querCorrer = (shift || (analogico && Math.hypot(analogico.lado, analogico.frente) > 0.95)) && !segurando && podeMexer;
   correndo = folego.update(dt, querCorrer, andouAntes);
   const vel = (efeitos.leite ? efeitos.leite.velocidade : 1) * ferramentas.multVelocidade() * (correndo ? VELOCIDADE_CORRIDA : 1);
-  andouAntes = jogador.update(dt, vel, podeMexer);
+  const antes = jogador.posicao();
+  jogador.update(dt, vel, podeMexer);
+  const depois = jogador.posicao();
+  // "Andando" = a posição mudou neste quadro (vale para teclado, toque e testes).
+  andouAntes = Math.hypot(depois.x - antes.x, depois.z - antes.z) > 1e-4 || (posTeste && Math.hypot(depois.x - posTeste.x, depois.z - posTeste.z) > 1e-4);
+  posTeste = depois;
   ui.folego(folego.frac(), folego.cansado());
   atualizarSegurando(dt);
 
@@ -765,7 +801,7 @@ if (params.has('galeria')) {
   jogador.olharPara({ x: 0, z: 0 });
   modo = 'galeria';
 } else {
-  ui.telaInicial(comecar);
+  ui.telaInicial(comecar, abrirConfig);
 }
 // ?ver=x,z,alvoX,alvoZ posiciona a câmera (para prints de teste).
 if (params.has('ver')) {
@@ -778,7 +814,7 @@ requestAnimationFrame(loop);
 
 // Ganchos para testes automáticos.
 window.__jogo = {
-  clock, quiz, fiscal, inventario, noite, jogador, ui, ferramentas,
+  clock, quiz, fiscal, inventario, noite, jogador, ui, ferramentas, abrirConfig, config: () => config,
   estado: () => ({
     modo, pausado, fase: noite.fase(), minuto: clock.minutos(), perguntaAberta: !!perguntaAberta,
     visitantes: visitantes.map((v) => `${v.v.id}:${v.estado}`), itens: inventario.itens(), erros: quiz.erros(),

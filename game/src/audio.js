@@ -1,14 +1,24 @@
 // Sons sintetizados com Web Audio (sem arquivos).
 export function criarAudio() {
-  let ctx = null, mestre = null, zumbido = null, ambienteNos = null;
+  let ctx = null, mestre = null, efeitos = null, ambienteBus = null, zumbido = null, ambienteNos = null;
   const volumeAmbiente = 1;
+  let volumes = { geral: 0.8, efeitos: 0.8, ambiente: 0.6 };
 
   function iniciar() {
     if (ctx) { if (ctx.state === 'suspended') ctx.resume(); return; }
     ctx = new AudioContext();
     mestre = ctx.createGain();
-    mestre.gain.value = 0.7;
     mestre.connect(ctx.destination);
+    efeitos = ctx.createGain(); efeitos.connect(mestre);
+    ambienteBus = ctx.createGain(); ambienteBus.connect(mestre);
+    aplicarVolumes();
+  }
+
+  function aplicarVolumes() {
+    if (!ctx) return;
+    mestre.gain.value = 0.9 * volumes.geral;
+    efeitos.gain.value = volumes.efeitos;
+    ambienteBus.gain.value = volumes.ambiente;
   }
 
   function ruido(seg) {
@@ -26,7 +36,7 @@ export function criarAudio() {
     g.gain.exponentialRampToValueAtTime(pico, t0 + ataque);
     g.gain.exponentialRampToValueAtTime(0.0001, t0 + duracao);
     no.connect(g);
-    g.connect(mestre);
+    g.connect(efeitos);
     return g;
   }
 
@@ -71,6 +81,7 @@ export function criarAudio() {
 
   return {
     iniciar,
+    definirVolumes(v) { volumes = { ...volumes, ...v }; aplicarVolumes(); },
     tocar(id) {
       if (!ctx || !SONS[id]) return;
       SONS[id](ctx.currentTime + 0.01);
@@ -79,7 +90,7 @@ export function criarAudio() {
     ambiente(ligado) {
       if (!ctx) return;
       if (ligado && !ambienteNos) {
-        const g = ctx.createGain(); g.gain.value = 0.0001; g.connect(mestre);
+        const g = ctx.createGain(); g.gain.value = 0.0001; g.connect(ambienteBus);
         const filtro = ctx.createBiquadFilter(); filtro.type = 'lowpass'; filtro.frequency.value = 180; filtro.connect(g);
         const oscs = [55, 58.3, 82.4].map((f, i) => {
           const o = ctx.createOscillator(); o.type = i === 2 ? 'triangle' : 'sine'; o.frequency.value = f;

@@ -1,6 +1,5 @@
 // Jogador em 1ª pessoa: mouse para olhar, WASD para andar.
 import * as THREE from 'three';
-import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
 import { moverComColisao, temVisao } from './fisica.js';
 import { girarOlhar } from '../ui/toque-logica.js';
 
@@ -10,8 +9,24 @@ const TECLAS = { KeyW: 'frente', ArrowUp: 'frente', KeyS: 'tras', ArrowDown: 'tr
 
 // `entrada` (opcional): função que devolve { lado, frente } de -1 a 1 (analógico na tela).
 export function criarJogador(camera, dom, obterParedes, inicio, { entrada } = {}) {
-  const controles = new PointerLockControls(camera, dom);
   const apertadas = new Set();
+  const ajustes = { sensMouse: 1, sensToque: 1, inverterY: false };
+  const aoTravar = [], aoSoltar = [];
+  const travado = () => document.pointerLockElement === dom;
+
+  // Mouse com o ponteiro travado: gira a câmera.
+  document.addEventListener('mousemove', (e) => {
+    if (!travado()) return;
+    girar(e.movementX, e.movementY * (ajustes.inverterY ? -1 : 1), 0.002 * ajustes.sensMouse);
+  });
+  document.addEventListener('pointerlockchange', () => (travado() ? aoTravar : aoSoltar).forEach((cb) => cb()));
+
+  function girar(dx, dy, sensibilidade) {
+    const e = new THREE.Euler().setFromQuaternion(camera.quaternion, 'YXZ');
+    const r = girarOlhar({ yaw: e.y, pitch: e.x }, dx, dy, sensibilidade);
+    e.set(r.pitch, r.yaw, 0, 'YXZ');
+    camera.quaternion.setFromEuler(e);
+  }
   let pos = { ...inicio };
   let balanco = 0;
   camera.position.set(pos.x, ALTURA_OLHOS, pos.z);
@@ -28,11 +43,11 @@ export function criarJogador(camera, dom, obterParedes, inicio, { entrada } = {}
   }
 
   return {
-    controles,
-    travar: () => controles.lock(),
-    travado: () => controles.isLocked,
-    onSoltar: (cb) => controles.addEventListener('unlock', cb),
-    onTravar: (cb) => controles.addEventListener('lock', cb),
+    travar() { try { const r = dom.requestPointerLock?.(); r?.catch?.(() => {}); } catch { /* recusado */ } },
+    travado,
+    onSoltar: (cb) => aoSoltar.push(cb),
+    onTravar: (cb) => aoTravar.push(cb),
+    ajustar(c) { Object.assign(ajustes, c); },
     update(dt, multVel = 1, podeAndar = true) {
       if (!podeAndar) { apertadas.clear(); return false; }
       const f = direcao();
@@ -60,12 +75,7 @@ export function criarJogador(camera, dom, obterParedes, inicio, { entrada } = {}
       return n > 0; // andou neste quadro
     },
     // Gira a câmera pelo arrasto do dedo (px).
-    girar(dx, dy, sensibilidade = 0.006) {
-      const e = new THREE.Euler().setFromQuaternion(camera.quaternion, 'YXZ');
-      const r = girarOlhar({ yaw: e.y, pitch: e.x }, dx, dy, sensibilidade);
-      e.set(r.pitch, r.yaw, 0, 'YXZ');
-      camera.quaternion.setFromEuler(e);
-    },
+    girar(dx, dy) { girar(dx, dy * (ajustes.inverterY ? -1 : 1), 0.006 * ajustes.sensToque); },
     posicao: () => ({ ...pos }),
     teleportar(p) { pos = { ...p }; camera.position.set(pos.x, ALTURA_OLHOS, pos.z); },
     olharPara(p) { camera.lookAt(p.x, ALTURA_OLHOS, p.z); },

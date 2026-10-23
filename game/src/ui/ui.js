@@ -52,10 +52,10 @@ export function criarUI(root, { toque = false } = {}) {
   return {
     ocupado: () => modal !== null,
 
-    telaInicial(onJogar) {
-      telaCheia(`
+    telaInicial(onJogar, onConfig) {
+      const t = telaCheia(`
         <h1>PLANTÃO NO BANHEIRO</h1>
-        <h2>Episódio 1 — A Ronda do Fiscal</h2>
+        <h2>Episódio 1 — A Votação do Banheiro</h2>
         <p class="aviso-parodia">${esc(AVISO_PARODIA)}</p>
         <p>Você é o zelador do turno da noite de um banheiro público 24h.<br>Sobreviva até as 06:00.</p>
         <p class="controles">${toque
@@ -63,6 +63,12 @@ export function criarUI(root, { toque = false } = {}) {
           : 'Mouse: olhar · WASD: andar · Shift: correr · E: interagir (segure nas tarefas) · 1–8: usar item · Esc: pausar'}<br>
         Quando o Fiscal perguntar, ${toque ? 'toque na resposta' : 'responda com 1, 2 ou 3'}. <b>Não diga nada com "trans".</b></p>
       `, 'Começar plantão', onJogar);
+      if (onConfig) {
+        const b = el('button', 'botao secundario', 'Configurações');
+        b.type = 'button';
+        b.addEventListener('click', onConfig);
+        t.querySelector('.conteudo').append(b);
+      }
     },
 
     mostrarHud(v) { hud.classList.toggle('oculto', !v); },
@@ -176,17 +182,70 @@ export function criarUI(root, { toque = false } = {}) {
     // Devolve true se a janela aberta usou a tecla.
     tecla(code) { return modal ? modal.tecla(code) : false; },
 
-    pausa(mostrar, onContinuar) {
+    pausa(mostrar, onContinuar, onConfig) {
       root.classList.toggle('pausado', mostrar);
       root.querySelector('.tela-pausa')?.remove();
       if (!mostrar) return;
-      if (onContinuar) {
-        telaCheia('<h1>PAUSADO</h1>', 'Continuar plantão', onContinuar).classList.add('tela-pausa');
-        return;
+      const t = telaCheia('<h1>PAUSADO</h1>', 'Continuar plantão', () => onContinuar?.());
+      t.classList.add('tela-pausa');
+      if (onConfig) {
+        const b = el('button', 'botao secundario', 'Configurações');
+        b.type = 'button';
+        b.addEventListener('click', onConfig);
+        t.querySelector('.conteudo').append(b);
       }
-      const t = el('div', 'tela-cheia tela-pausa', '<div class="conteudo"><h1>PAUSADO</h1><p>Clique para continuar o plantão.</p></div>');
-      t.style.pointerEvents = 'none';
+    },
+
+    // Menu de configurações. `onMudar(config)` a cada ajuste; `onFechar()` no Voltar.
+    configuracoes(config, padrao, onMudar, onFechar) {
+      let c = { ...config };
+      const pct = (v) => `${Math.round(v * 100)}%`;
+      const vezes = (v) => `${v.toFixed(1)}×`;
+      const CAMPOS = [
+        ['Áudio'],
+        ['volumeGeral', 'Volume geral', 0, 1, 0.05, pct],
+        ['volumeEfeitos', 'Efeitos (passos, sustos, telefone)', 0, 1, 0.05, pct],
+        ['volumeAmbiente', 'Ambiente de terror', 0, 1, 0.05, pct],
+        ['Controles'],
+        ['sensMouse', 'Sensibilidade do mouse', 0.2, 3, 0.1, vezes],
+        ['sensToque', 'Sensibilidade do toque', 0.2, 3, 0.1, vezes],
+        ['inverterY', 'Inverter olhar vertical'],
+        ['Imagem'],
+        ['qualidade', 'Qualidade'],
+        ['fov', 'Campo de visão', 55, 95, 1, (v) => `${v}°`],
+        ['efeitosTela', 'Granulação e vinheta'],
+      ];
+      const linhas = CAMPOS.map(([id, rotulo, min, max, passo, fmt]) => {
+        if (rotulo === undefined) return `<h3>${esc(id)}</h3>`;
+        if (id === 'qualidade') return `<label class="campo"><span>${rotulo}</span><select id="cfg-qualidade">
+          <option value="alta">Alta (até 1080p)</option><option value="media">Média (720p, mais leve)</option><option value="retro">Retrô (240p, estilo PS1)</option></select></label>`;
+        if (min === undefined) return `<label class="campo caixa"><input type="checkbox" id="cfg-${id}"><span>${rotulo}</span></label>`;
+        return `<label class="campo"><span>${rotulo} <output id="cfg-${id}-v"></output></span><input type="range" id="cfg-${id}" min="${min}" max="${max}" step="${passo}"></label>`;
+      }).join('');
+      const t = el('div', 'tela-cheia tela-config', `<div class="conteudo config"><h1>CONFIGURAÇÕES</h1>${linhas}
+        <div class="acoes"><button type="button" class="botao secundario" data-acao="padrao">Restaurar padrão</button>
+        <button type="button" class="botao" data-acao="voltar">Voltar</button></div></div>`);
+      const preencher = () => {
+        for (const [id, rotulo, , , , fmt] of CAMPOS) {
+          if (rotulo === undefined) continue;
+          const inp = t.querySelector(`#cfg-${id}`);
+          if (inp.type === 'checkbox') inp.checked = c[id];
+          else inp.value = c[id];
+          if (fmt) t.querySelector(`#cfg-${id}-v`).textContent = fmt(c[id]);
+        }
+      };
+      t.addEventListener('input', (e) => {
+        const id = e.target.id?.replace('cfg-', '');
+        if (!id || !(id in c)) return;
+        c[id] = e.target.type === 'checkbox' ? e.target.checked : e.target.tagName === 'SELECT' ? e.target.value : Number(e.target.value);
+        preencher();
+        onMudar({ ...c });
+      });
+      t.querySelector('[data-acao="padrao"]').addEventListener('click', () => { c = { ...padrao }; preencher(); onMudar({ ...c }); });
+      t.querySelector('[data-acao="voltar"]').addEventListener('click', () => { t.remove(); onFechar?.(); });
+      preencher();
       root.append(t);
+      setTimeout(() => t.querySelector('[data-acao="voltar"]').focus(), 50);
     },
 
     derrota(hora, onTentar) {

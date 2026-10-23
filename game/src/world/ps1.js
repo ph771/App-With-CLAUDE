@@ -1,28 +1,26 @@
-// Render em baixa resolução (240 linhas) ampliado sem suavizar.
-// Computador: 4:3 com faixas pretas. Celular (`preencher`): ocupa a tela toda, na proporção dela.
+// Renderizador: ocupa a tela toda (sem faixas pretas), em até 1080 linhas.
+// Qualidades: 'alta' (até 1080p), 'media' (até 720p), 'retro' (240 linhas ampliadas, estilo PS1).
 import * as THREE from 'three';
 
-export const LARGURA = 320, ALTURA = 240;
+const LINHAS = { alta: 1080, media: 720, retro: 240 };
 
-export function criarRenderPS1(canvas, { preencher = false, aoMudarProporcao } = {}) {
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, preserveDrawingBuffer: true });
-  renderer.setPixelRatio(1);
-  renderer.setSize(LARGURA, ALTURA, false);
-  canvas.style.imageRendering = 'pixelated';
+export function criarRenderPS1(canvas, { aoMudarProporcao } = {}) {
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.15;
+  let qualidade = 'alta';
 
   function redimensionar() {
-    if (preencher) {
-      const proporcao = Math.min(Math.max(innerWidth / innerHeight, 4 / 3), 21 / 9);
-      renderer.setSize(Math.round(ALTURA * proporcao), ALTURA, false);
-      aoMudarProporcao?.(proporcao);
-      const escala = Math.min(innerWidth / (ALTURA * proporcao), innerHeight / ALTURA);
-      canvas.style.width = `${Math.floor(ALTURA * proporcao * escala)}px`;
-      canvas.style.height = `${Math.floor(ALTURA * escala)}px`;
-      return;
-    }
-    const escala = Math.min(innerWidth / LARGURA, innerHeight / ALTURA);
-    canvas.style.width = `${Math.floor(LARGURA * escala)}px`;
-    canvas.style.height = `${Math.floor(ALTURA * escala)}px`;
+    const w = innerWidth, h = innerHeight;
+    const linhas = LINHAS[qualidade] ?? 1080;
+    // Pixels de verdade por pixel de CSS, sem passar do limite de linhas.
+    const razao = Math.min(devicePixelRatio || 1, linhas / h);
+    renderer.setPixelRatio(razao);
+    renderer.setSize(w, h, false);
+    canvas.style.width = `${w}px`;
+    canvas.style.height = `${h}px`;
+    canvas.style.imageRendering = qualidade === 'retro' ? 'pixelated' : 'auto';
+    aoMudarProporcao?.(w / h);
   }
   addEventListener('resize', redimensionar);
 
@@ -31,5 +29,7 @@ export function criarRenderPS1(canvas, { preencher = false, aoMudarProporcao } =
     render: (scene, camera) => { renderer.setRenderTarget(null); renderer.render(scene, camera); },
     renderEm: (alvo, scene, camera) => { renderer.setRenderTarget(alvo); renderer.render(scene, camera); renderer.setRenderTarget(null); },
     redimensionar,
+    definirQualidade(q) { qualidade = LINHAS[q] ? q : 'alta'; redimensionar(); },
+    anisotropiaMaxima: () => renderer.capabilities.getMaxAnisotropy(),
   };
 }

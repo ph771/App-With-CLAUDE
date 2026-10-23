@@ -18,7 +18,7 @@ function caixa(pai, { minX, maxX, minZ, maxZ }, y0, y1, material) {
 }
 
 function placa(pai, texto, pos, rotY = 0, opts = {}, largura = 1.4) {
-  const m = new THREE.Mesh(new THREE.PlaneGeometry(largura, 0.32), new THREE.MeshBasicMaterial({ map: tex.placa(texto, { largura: 160, ...opts }) }));
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(largura, 0.32), new THREE.MeshBasicMaterial({ map: tex.placa(texto, { aspecto: largura / 0.32, ...opts }) }));
   m.position.set(pos.x, pos.y, pos.z);
   m.rotation.y = rotY;
   pai.add(m);
@@ -68,7 +68,8 @@ export function criarPredio(scene) {
   const madeira = lambert({ map: tex.madeira() });
   for (const d of PORTAS_FECHADAS) {
     // Fica do lado do corredor/portaria (z maior para portas na parede norte do corredor).
-    const lado = d.z === 10 ? -1 : 1;
+    // Lado de onde a porta é vista: a portaria (saída) e o corredor dos gabinetes ficam do lado -z.
+    const lado = d.z === 10 || d.z === 0 ? -1 : 1;
     caixa(scene, { minX: d.x1, maxX: d.x2, minZ: d.z + lado * 0.1, maxZ: d.z + lado * 0.18 }, 0, 2.2, madeira);
     placa(scene, d.placa, { x: (d.x1 + d.x2) / 2, y: 2.4, z: d.z + lado * 0.2 }, lado > 0 ? 0 : Math.PI, { fundo: '#2a2a2a' }, 1);
   }
@@ -77,9 +78,9 @@ export function criarPredio(scene) {
     ['MASCULINO', -15, -3, 0, '#1d3d6b'], ['FEMININO', 15, -3, 0, '#6b1d4a'], ['PLENÁRIO', 100, -3, 0, '#1c5130'],
     ['BANHEIRO DOS PARLAMENTARES', 119, -3, 0, '#7a5a10'], ['IMPRENSA', 81, -3, 0, '#333'], ['CASA DE MÁQUINAS', 200, -3, 0, '#5a4a1a'],
   ];
-  for (const [t, x, z, , cor] of PLACAS) placa(scene, t, { x, y: 2.6, z: z + 0.15 }, 0, { fundo: cor }, t.length > 12 ? 2.4 : 1.4);
-  placa(scene, 'ALMOXARIFADO', { x: -19.85, y: 2.6, z: -1.5 }, Math.PI / 2, { fundo: '#5a4a1a' });
-  placa(scene, 'COPA', { x: 19.85, y: 2.6, z: -1.5 }, -Math.PI / 2, { fundo: '#333' });
+  for (const [t, x, z, , cor] of PLACAS) placa(scene, t, { x, y: 2.68, z: z + 0.13 }, 0, { fundo: cor }, t.length > 12 ? 2.6 : 1.5);
+  placa(scene, 'ALMOXARIFADO', { x: -19.87, y: 2.68, z: -1.5 }, Math.PI / 2, { fundo: '#5a4a1a' }, 1.7);
+  placa(scene, 'COPA', { x: 19.87, y: 2.68, z: -1.5 }, -Math.PI / 2, { fundo: '#333' }, 1);
   placa(scene, 'CASA LEGISLATIVA DE VILA NOVA DO SUL', { x: 0, y: 2.6, z: 9.85 }, Math.PI, { fundo: '#1c3a2a' }, 4);
 
   // Cabines: divisórias, portas entreabertas e vasos.
@@ -100,7 +101,7 @@ export function criarPredio(scene) {
     const cx = (c.x1 + c.x2) / 2;
     caixa(scene, { minX: cx - 0.2, maxX: cx + 0.2, minZ: c.z1 + 0.25, maxZ: c.z1 + 0.8 }, 0, 0.42, c.sala === 'banheiro_vip' ? lambert({ color: 0xf0e6c8 }) : loucas);
     caixa(scene, { minX: cx - 0.25, maxX: cx + 0.25, minZ: c.z1 + 0.02, maxZ: c.z1 + 0.22 }, 0.42, 0.85, loucas);
-    placa(scene, String(c.numero).padStart(2, '0'), { x: cx, y: 2.25, z: c.z2 + 0.02 }, 0, { fundo: '#222' }, 0.4);
+    placa(scene, String(c.numero).padStart(2, '0'), { x: cx, y: 2.3, z: c.z2 + 0.03 }, 0, { fundo: '#222' }, 0.45);
   }
 
   // Móveis.
@@ -139,7 +140,7 @@ export function criarPredio(scene) {
         for (let z = m.minZ + 0.6; z < m.maxZ - 0.3; z += 1) caixa(scene, { minX: x - 0.18, maxX: x + 0.18, minZ: z - 0.22, maxZ: z + 0.22 }, m.altura, m.altura + 0.05, loucas);
         if (m.ouro) for (let z = m.minZ + 0.6; z < m.maxZ - 0.3; z += 1) caixa(scene, { minX: m.maxX - 0.12, maxX: m.maxX - 0.04, minZ: z - 0.03, maxZ: z + 0.03 }, m.altura, m.altura + 0.25, lambert({ color: 0xd4a017 }));
         const oeste = m.espelho === 'oeste';
-        const espelho = new Reflector(new THREE.PlaneGeometry(m.maxZ - m.minZ - 0.2, 1.1), { textureWidth: 160, textureHeight: 64, color: 0x8a9090 });
+        const espelho = new Reflector(new THREE.PlaneGeometry(m.maxZ - m.minZ - 0.2, 1.1), { textureWidth: 768, textureHeight: 288, color: 0x9aa0a0 });
         espelho.position.set(oeste ? m.maxX - 0.01 : m.minX + 0.01, 1.75, (m.minZ + m.maxZ) / 2);
         espelho.rotation.y = oeste ? -Math.PI / 2 : Math.PI / 2;
         scene.add(espelho);
@@ -170,7 +171,7 @@ export function criarPredio(scene) {
   // Guichê: telefone e monitor da câmera do corredor dos gabinetes.
   const telefone = caixa(scene, { minX: -7.8, maxX: -7.5, minZ: 3.5, maxZ: 3.75 }, 1, 1.1, lambert({ color: 0x202020 }));
   caixa(scene, { minX: -7.95, maxX: -7.45, minZ: 4.85, maxZ: 5.55 }, 1, 1.5, lambert({ color: 0x2a2a2a }));
-  const alvoMonitor = new THREE.WebGLRenderTarget(128, 96, { magFilter: THREE.NearestFilter, minFilter: THREE.NearestFilter });
+  const alvoMonitor = new THREE.WebGLRenderTarget(320, 240);
   const tela = new THREE.Mesh(new THREE.PlaneGeometry(0.6, 0.42), new THREE.MeshBasicMaterial({ map: alvoMonitor.texture }));
   tela.position.set(-7.44, 1.25, 5.2); tela.rotation.y = Math.PI / 2; scene.add(tela);
   const cam = PONTOS.cameraMonitor;

@@ -147,3 +147,28 @@ body.toque .hud-tarefas { width: min(24em, 42vw); max-height: 60vh; overflow: hi
 .folego div { height: 100%; background: #9fd3ff; }
 .folego.cansado div { background: var(--perigo); }
 body.toque .folego { bottom: calc(110px + env(safe-area-inset-bottom, 0px)); }
+
+/* ---------- Configurações ---------- */
+.botao.secundario { border-color: var(--apagado); margin-left: 0.4em; }
+.tela-config { z-index: 3; overflow-y: auto; align-items: start; padding-block: 24px; background: rgba(0, 0, 0, 0.97); }
+.config { text-align: left; width: min(34em, 100%); display: grid; gap: 6px; }
+.config h1 { text-align: center; font-size: 2em; }
+.config h3 { margin: 0.6em 0 0; color: var(--destaque); font-weight: normal; letter-spacing: 0.08em; border-bottom: 1px solid #333; }
+.config .campo { display: grid; gap: 2px; }
+.config .campo span { display: flex; justify-content: space-between; }
+.config .campo output { color: var(--destaque); font-variant-numeric: tabular-nums; }
+.config .campo.caixa { grid-template-columns: auto 1fr; align-items: center; gap: 10px; }
+.config input[type="range"] { width: 100%; accent-color: var(--destaque); }
+.config input[type="checkbox"] { width: 1.2em; height: 1.2em; accent-color: var(--destaque); }
+.config select { font: inherit; background: #1c2a20; color: var(--texto); border: 2px solid var(--borda); padding: 2px 6px; }
+.config .acoes { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; margin-top: 0.6em; }
+.config input:focus-visible, .config select:focus-visible { outline: 2px solid var(--destaque); }
+
+/* ---------- Efeitos de tela: vinheta e granulação ---------- */
+#efeitos-tela { position: fixed; inset: 0; pointer-events: none; z-index: 1; }
+#efeitos-tela .vinheta { position: absolute; inset: 0; background: radial-gradient(ellipse at center, rgba(0,0,0,0) 55%, rgba(0,0,0,0.65) 100%); }
+#efeitos-tela .grao { position: absolute; inset: -50%; opacity: 0.09; animation: grao 0.5s steps(4) infinite; }
+@keyframes grao { 0% { transform: translate(0, 0); } 25% { transform: translate(-5%, 3%); } 50% { transform: translate(4%, -6%); } 75% { transform: translate(-3%, 5%); } }
+@media (prefers-reduced-motion: reduce) { #efeitos-tela .grao { animation: none; } }
+#efeitos-tela.desligado { display: none; }
+#toque { z-index: 1; }

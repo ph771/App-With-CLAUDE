@@ -1,0 +1,76 @@
+// Visitantes da noite (NPCs). Paródia: nomes inventados, piadas com manias públicas.
+export const VISITANTES = [
+  {
+    id: 'lulao', nome: 'Lulão', minuto: 0, item: 'lanterna',
+    falas: [
+      'Companheiro, nunca antes na história desse país um banheiro foi tão fiscalizado.',
+      'Esse rapaz prometeu cuidar do banheiro. Eu prometi picanha. Ninguém entregou.',
+      'Toma essa lanterna. A luz daqui não é de confiança.',
+    ],
+  },
+  {
+    id: 'mamae_falou', nome: 'Mamãe Falou', minuto: 60, item: 'microfone',
+    falas: [
+      'MAMÃE FALOU! Olha o cara de prancheta parado na porta do banheiro, gente!',
+      'Se ele vier pra cima, mete o microfone na cara dele. Ele nunca recusa uma entrevista.',
+    ],
+  },
+  {
+    id: 'renan', nome: 'Renan Santarém', minuto: 120, item: 'caneca',
+    falas: [
+      'Três milhões de votos pra fiscalizar banheiro, cara? É meio louco isso aí.',
+      'Fica com a minha caneca. Joga longe que ele vai atrás do barulho. Eu sei do que tô falando.',
+    ],
+  },
+  {
+    id: 'moraez', nome: 'Ministro Moraez', minuto: 150, item: 'ordem',
+    falas: [
+      'Este fiscal está sob investigação.',
+      'O perfil dele está suspenso. O banheiro também, se precisar.',
+      'Aqui está uma ordem de suspensão. Use com moderação.',
+    ],
+  },
+  {
+    id: 'kim', nome: 'Kim Katagiri', minuto: 180, item: 'mapa',
+    falas: [
+      '(se olha no espelho) ...Parem de me mandar esse meme.',
+      'Lá no meu trabalho é sempre assim: ninguém lê, ninguém trabalha, ninguém faz nada.',
+      'Vocês ficam fazendo dancinha pra internet e não tem uma proposta pra mudar os banheiros do Brasil! Olha o estado dessa pia!',
+      'Toma, fiz um mapa do caminho que ele faz. Ninguém mais ia fazer.',
+    ],
+  },
+  {
+    id: 'nicolas', nome: 'Nicolas Ferrer', minuto: 240, item: 'peruca',
+    falas: [
+      'Ele pegou minha peruca emprestada pra um vídeo e não devolveu.',
+      'Fica com a reserva. Com ela ele te confunde com outra pessoa.',
+    ],
+  },
+  {
+    id: 'jairo', nome: 'Seu Jairo', minuto: 270, item: 'leite',
+    falas: [
+      'Esse rapaz aí? Mandei ele cuidar do banheiro pra parar de me ligar, talkey?',
+      'Banheiro não é prioridade. Prioridade é pão com leite condensado.',
+      'Toma uma lata. Dá energia pra correr.',
+    ],
+  },
+  {
+    id: 'flavio', nome: 'Flávio "Zero Um"', minuto: 300, item: 'chave',
+    falas: [
+      'Eu sou o 01 em tudo, mas aqui na fila da cabine eu sou o 02.',
+      'Meu pai mandou avisar que esse fiscal não é do partido.',
+      'Toma a chave da cabine 01. Lá dentro ele não te acha.',
+    ],
+  },
+];
+
+export const ITENS = {
+  lanterna: { nome: 'Lanterna', dica: 'Liga e desliga a luz.' },
+  microfone: { nome: 'Microfone', dica: 'O Fiscal para 20 s para dar entrevista.' },
+  caneca: { nome: 'Caneca', dica: 'Joga longe: o Fiscal vai atrás do barulho.' },
+  ordem: { nome: 'Ordem de suspensão', dica: 'O Fiscal some por 30 s.' },
+  mapa: { nome: 'Mapa', dica: 'Mostra o caminho do Fiscal.' },
+  peruca: { nome: 'Peruca', dica: 'Durante a pergunta: ele te confunde e vai embora.' },
+  leite: { nome: 'Leite condensado', dica: 'Corre mais rápido por 1 minuto.' },
+  chave: { nome: 'Chave da cabine 01', dica: 'Abre o único esconderijo seguro.' },
+};

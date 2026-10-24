@@ -1,7 +1,18 @@
 // Falas dubladas: o texto exato que aparece na tela → arquivo de áudio em assets/vozes/.
-// Vozes de caricatura feitas no ElevenLabs (não imitam as pessoas reais).
+// Vozes de caricatura feitas no ElevenLabs (não imitam as pessoas reais); Lulão e Fiscal gravados pelo usuário.
 // Para trocar por uma gravação sua, basta substituir o .mp3 com o mesmo nome.
 const FALAS = {
+  // Lulão: voz gravada pelo usuário.
+  lulao: [
+    'Companheiro, tem café nessa copa? ...Frio. Igual esse projeto de lei.',
+    'Nunca antes na história desse país um banheiro foi tão fiscalizado.',
+    'Esse rapaz prometeu cuidar do banheiro. Eu prometi picanha. Ninguém entregou.',
+    'Toma essa lanterna. A luz daqui não é de confiança.',
+    'Companheiro, o café acabou. Sem café não tem democracia.',
+    'Tem um pacote no almoxarifado. Traz pra mim?',
+    'Ah, agora sim. Café de verdade, não de fiscal.',
+    'Voto NÃO pro projeto. Companheiro, banheiro é direito de todos.',
+  ],
   mamae_falou: [
     'MAMÃE FALOU! Olha o cara de prancheta parado na porta do banheiro, gente!',
     'Posso falar? Os banheiros são fáceis... porque são inanimados.',
@@ -76,5 +87,14 @@ for (const [id, falas] of Object.entries(FALAS)) {
 }
 
 // Gritos do Fiscal durante a caçada (gravados pelo usuário). Tocam com volume pela distância.
-// Para adicionar: coloque assets/vozes/fiscal-caca-N.mp3 e acrescente aqui.
-export const VOZES_CACADA = [];
+// Para adicionar: coloque assets/vozes/fiscal-caca-N.mp3 e acrescente o texto aqui, na ordem.
+export const VOZES_CACADA = [
+  'Ei! Você aí! Parado!',
+  'Eu sei que você tá aí...',
+  'Fiscalização! Ninguém se mexe!',
+  'Cadê você? Vem cá, zelador...',
+  'Isso aqui é uma TRANSgressão!',
+  'Sinto cheiro de TRANSpiração...',
+  'Pode correr, eu tenho a noite toda.',
+  'Não adianta se esconder na cabine!',
+].map((texto, i) => ({ texto, arq: `assets/vozes/fiscal-caca-${i + 1}.mp3` }));

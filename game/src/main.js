@@ -996,7 +996,9 @@ function vozDaCacada(dt, pj, fp) {
   let i = Math.floor(Math.random() * VOZES_CACADA.length);
   if (VOZES_CACADA.length > 1 && i === ultimaVozFiscal) i = (i + 1) % VOZES_CACADA.length;
   ultimaVozFiscal = i;
-  vozFiscal = audio.vozDistante(VOZES_CACADA[i], vol);
+  vozFiscal = audio.vozDistante(VOZES_CACADA[i].arq, vol);
+  // Legenda só quando dá para ouvir bem.
+  if (vol > 0.15) ui.legenda('Fiscal Pavonato', VOZES_CACADA[i].texto, 2.5);
 }
 
 function atualizar(dt, t) {

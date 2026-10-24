@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { DUBLAGEM } from '../src/data/dublagem.js';
+import { DUBLAGEM, VOZES_CACADA } from '../src/data/dublagem.js';
 import { VISITANTES } from '../src/data/visitantes.js';
 import { FAVORES } from '../src/data/favores.js';
 
@@ -16,5 +16,6 @@ test('toda fala dublada existe no jogo (texto idêntico)', () => {
 });
 
 test('todo arquivo de voz existe', () => {
+  for (const { arq } of VOZES_CACADA) assert.ok(existsSync(JOGO + arq), `falta ${arq}`);
   for (const arq of Object.values(DUBLAGEM)) assert.ok(existsSync(JOGO + arq), `falta ${arq}`);
 });

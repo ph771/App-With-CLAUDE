@@ -14,6 +14,7 @@ export const VISITANTES = [
     id: 'mamae_falou', nome: 'Mamãe Falou', minuto: 61, item: 'microfone', voto: 'E o meu voto é NÃO! Ao vivo pra galera!',
     falas: [
       'MAMÃE FALOU! Olha o cara de prancheta parado na porta do banheiro, gente!',
+      'Posso falar? Os banheiros são fáceis... porque são inanimados.',
       'Se ele vier pra cima, mete o microfone na cara dele. Ele nunca recusa uma entrevista.',
     ],
   },
@@ -21,6 +22,7 @@ export const VISITANTES = [
     id: 'renan', nome: 'Renan Santarém', minuto: 121, item: 'caneca', voto: 'Voto não. Três milhões de votos pra isso? Não.',
     falas: [
       'Três milhões de votos pra fiscalizar banheiro, cara? É meio louco isso aí.',
+      'VAMO DEBATER? VAMO DEBATER, CARA! QUER DEBATER?',
       'Fica com a minha caneca. Joga longe que ele vai atrás do barulho. Eu sei do que tô falando.',
     ],
   },
@@ -36,6 +38,7 @@ export const VISITANTES = [
     id: 'kim', nome: 'Kim Katagiri', minuto: 181, item: 'mapa', voto: 'Meu voto é não. Pelo menos alguém aqui vota alguma coisa.',
     falas: [
       '(se olha na tela do celular) ...Parem de me mandar esse meme.',
+      'Ficam me chamando de FONÃO. Vou criar uma lei para instituir pena de morte...',
       'Lá no meu trabalho é sempre assim: ninguém lê, ninguém trabalha, ninguém faz nada.',
       'Vocês ficam fazendo dancinha pra internet e não tem uma proposta pra mudar os banheiros do Brasil! Olha o estado desse plenário!',
       'Toma, fiz um mapa do caminho que ele faz. Ninguém mais ia fazer.',

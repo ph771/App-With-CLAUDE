@@ -6,6 +6,13 @@ export function criarAudio() {
   let volumes = { geral: 0.8, efeitos: 0.8, ambiente: 0.6 };
   const buffersVoz = new Map();
   let vozAtual = null, pedidoVoz = 0;
+  // Baixa e decodifica um mp3 de voz uma vez só (null se o arquivo não existir).
+  function carregarVoz(url) {
+    if (!buffersVoz.has(url)) {
+      buffersVoz.set(url, fetch(url).then((r) => (r.ok ? r.arrayBuffer() : Promise.reject())).then((b) => ctx.decodeAudioData(b)).catch(() => null));
+    }
+    return buffersVoz.get(url);
+  }
 
   function iniciar() {
     if (ctx) { if (ctx.state === 'suspended') ctx.resume(); return; }
@@ -96,10 +103,7 @@ export function criarAudio() {
       vozAtual?.stop(); vozAtual = null;
       if (!ctx || !url) return;
       const pedido = ++pedidoVoz;
-      if (!buffersVoz.has(url)) {
-        buffersVoz.set(url, fetch(url).then((r) => r.arrayBuffer()).then((b) => ctx.decodeAudioData(b)).catch(() => null));
-      }
-      buffersVoz.get(url).then((buf) => {
+      carregarVoz(url).then((buf) => {
         if (!buf || pedido !== pedidoVoz) return;
         const src = ctx.createBufferSource();
         src.buffer = buf;
@@ -107,6 +111,24 @@ export function criarAudio() {
         src.start();
         vozAtual = src;
       });
+    },
+    // Voz que vem de longe (o Fiscal na caçada): devolve um controle para ajustar
+    // o volume a cada quadro conforme a distância. `acabou` vira true no fim.
+    vozDistante(url, volume = 1) {
+      if (!ctx || !url) return null;
+      const g = ctx.createGain();
+      g.gain.value = volume;
+      g.connect(mestre);
+      const h = { acabou: false, src: null, volume(v) { g.gain.setTargetAtTime(Math.max(0, v), ctx.currentTime, 0.08); }, parar() { h.acabou = true; h.src?.stop(); } };
+      carregarVoz(url).then((buf) => {
+        if (!buf || h.acabou) { h.acabou = true; return; }
+        h.src = ctx.createBufferSource();
+        h.src.buffer = buf;
+        h.src.connect(g);
+        h.src.onended = () => { h.acabou = true; g.disconnect(); };
+        h.src.start();
+      });
+      return h;
     },
     // `volume` (0 a 1): para sons à distância (pistas do Fiscal).
     tocar(id, volume = 1) {

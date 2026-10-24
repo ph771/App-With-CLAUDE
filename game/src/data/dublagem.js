@@ -74,3 +74,7 @@ for (const [id, falas] of Object.entries(FALAS)) {
     DUBLAGEM[texto] = `assets/vozes/${id}-${i + 1}.mp3`;
   });
 }
+
+// Gritos do Fiscal durante a caçada (gravados pelo usuário). Tocam com volume pela distância.
+// Para adicionar: coloque assets/vozes/fiscal-caca-N.mp3 e acrescente aqui.
+export const VOZES_CACADA = [];

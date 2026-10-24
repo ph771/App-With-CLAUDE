@@ -21,7 +21,7 @@ import { createFerramentas } from './logic/ferramentas.js';
 import { createFolego, VELOCIDADE_CORRIDA } from './logic/folego.js';
 import { PERGUNTAS, PERGUNTA_FINAL } from './data/perguntas.js';
 import { ITENS, VISITANTES } from './data/visitantes.js';
-import { DUBLAGEM } from './data/dublagem.js';
+import { DUBLAGEM, VOZES_CACADA } from './data/dublagem.js';
 import { FERRAMENTAS, FITAS, DURACAO_PERSEGUICAO } from './data/noite.js';
 import { FAVORES } from './data/favores.js';
 import { createFavores } from './logic/favores.js';
@@ -172,6 +172,7 @@ let tempoPasso = 0;
 let tempoFita = FITA_A_CADA;
 let escondido = null; // esconderijo em que você está
 let prendendoAr = false; // Espaço (ou botão no celular)
+let vozFiscal = null, tempoVozFiscal = 1.5, ultimaVozFiscal = -1;
 let perseg = { ativa: false, ultimo: null, busca: null, abrindo: 0, alarme: 0 };
 let ligacao = 'mudo'; // qual ligação está tocando
 let tempoPista = 6; // próxima pista de som do Fiscal (caneta, assobio)
@@ -980,6 +981,24 @@ function pistasDeSom(dt, pj, fp, minuto) {
   audio.tocar(Math.random() < 0.6 ? 'prancheta' : 'assobio', Math.max(0.15, 1 - d / 22));
 }
 
+// Voz do Fiscal na caçada: um grito de tempos em tempos, mais alto quanto mais perto ele está.
+// Em outro andar não se ouve; atrás de parede fica abafado pela metade.
+const ALCANCE_VOZ = 26;
+function vozDaCacada(dt, pj, fp) {
+  const cacando = perseg.ativa || cacador.cacando > 0;
+  if (!cacando) { vozFiscal?.parar(); vozFiscal = null; tempoVozFiscal = 1.5; return; }
+  const d = Math.hypot(fp.x - pj.x, fp.z - pj.z);
+  const vol = !mesmoAndar(pj, fp) ? 0 : Math.max(0, 1 - d / ALCANCE_VOZ) * (temVisao(fp, pj, PAREDES) ? 1 : 0.5);
+  if (vozFiscal && !vozFiscal.acabou) { vozFiscal.volume(vol); return; }
+  tempoVozFiscal -= dt;
+  if (tempoVozFiscal > 0 || !VOZES_CACADA.length) return;
+  tempoVozFiscal = 4 + Math.random() * 4;
+  let i = Math.floor(Math.random() * VOZES_CACADA.length);
+  if (VOZES_CACADA.length > 1 && i === ultimaVozFiscal) i = (i + 1) % VOZES_CACADA.length;
+  ultimaVozFiscal = i;
+  vozFiscal = audio.vozDistante(VOZES_CACADA[i], vol);
+}
+
 function atualizar(dt, t) {
   rodarAgendados(dt);
   if (modo !== 'jogando') return;
@@ -1026,6 +1045,7 @@ function atualizar(dt, t) {
     if (r === 'alcancou' && fiscal.visivel(minuto)) abrirPergunta(false);
     if (perseg.ativa && !fiscal.perseguindo() && !perguntaAberta) terminarPerseguicao(true);
     pistasDeSom(dt, pj, fiscal.posicao(), minuto);
+    vozDaCacada(dt, pj, fiscal.posicao());
   }
   ui.suspeita(suspeita.frac(), cacador.cacando > 0 || perseg.ativa);
   stats.tempo += dt;
@@ -1220,7 +1240,7 @@ window.__jogo = {
     tarefas: noite.tarefas().map((x) => `${x.id}:${x.feita ? 1 : 0}`), segurando, correndo, folego: folego.frac(),
   }),
   comecar, terminarNoite, abrirPergunta, pegarFerramenta, acaoInicio, acaoFim, lerPagina,
-  favores, comecarPerseguicao, stats, suspeita, salvarAgora, comecarSusto, entrarEsconderijo, sairEsconderijo, perseg: () => perseg, escondido: () => escondido?.id ?? null,
+  favores, comecarPerseguicao, vozesCacada: VOZES_CACADA, stats, suspeita, salvarAgora, comecarSusto, entrarEsconderijo, sairEsconderijo, perseg: () => perseg, escondido: () => escondido?.id ?? null,
   prenderAr: (v) => { prendendoAr = v; },
   correr: (v) => { shift = v; },
   proximoAlvo, regiaoDe,

@@ -21,6 +21,7 @@ import { createFerramentas } from './logic/ferramentas.js';
 import { createFolego, VELOCIDADE_CORRIDA } from './logic/folego.js';
 import { PERGUNTAS, PERGUNTA_FINAL } from './data/perguntas.js';
 import { ITENS, VISITANTES } from './data/visitantes.js';
+import { DUBLAGEM } from './data/dublagem.js';
 import { FERRAMENTAS, FITAS, DURACAO_PERSEGUICAO } from './data/noite.js';
 import { FAVORES } from './data/favores.js';
 import { createFavores } from './logic/favores.js';
@@ -249,11 +250,11 @@ function falarCom(vis) {
   const estado = favores.estado(id);
   if (estado === 'novo') {
     vis.estado = 'falando';
-    ui.dialogo(vis.v.nome, [...vis.v.falas, ...f.pedido], () => { favores.pedir(id); vis.estado = 'pedido'; sincronizarFavores(); });
+    ui.dialogo(vis.v.nome, [...vis.v.falas, ...f.pedido], () => { favores.pedir(id); vis.estado = 'pedido'; sincronizarFavores(); }, dublar);
     return;
   }
   if (!favores.podeEntregar(id, { naMao: ferramentas.naMao() })) {
-    ui.dialogo(vis.v.nome, [lembreteFavor(id)]);
+    ui.dialogo(vis.v.nome, [lembreteFavor(id)], null, dublar);
     return;
   }
   vis.estado = 'falando';
@@ -266,8 +267,11 @@ function falarCom(vis) {
     ui.aviso(`Voto NÃO registrado (${votos.size}/8) · Você recebeu: ${it.nome} — ${it.dica}`, 4.5);
     vis.estado = 'feito';
     sincronizarFavores();
-  });
+  }, dublar);
 }
+
+// Toca a voz gravada da fala, se houver (null cala).
+function dublar(texto) { audio.voz(texto ? DUBLAGEM[texto] : null); }
 
 function lembreteFavor(id) {
   const f = FAVORES[id];

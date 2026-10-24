@@ -4,6 +4,8 @@ export function criarAudio() {
   let ctx = null, mestre = null, efeitos = null, ambienteBus = null, zumbido = null, ambienteNos = null;
   const volumeAmbiente = 1;
   let volumes = { geral: 0.8, efeitos: 0.8, ambiente: 0.6 };
+  const buffersVoz = new Map();
+  let vozAtual = null, pedidoVoz = 0;
 
   function iniciar() {
     if (ctx) { if (ctx.state === 'suspended') ctx.resume(); return; }
@@ -89,6 +91,23 @@ export function criarAudio() {
   return {
     iniciar,
     definirVolumes(v) { volumes = { ...volumes, ...v }; aplicarVolumes(); },
+    // Fala dublada (mp3). Para a anterior; `url` vazio só cala.
+    voz(url) {
+      vozAtual?.stop(); vozAtual = null;
+      if (!ctx || !url) return;
+      const pedido = ++pedidoVoz;
+      if (!buffersVoz.has(url)) {
+        buffersVoz.set(url, fetch(url).then((r) => r.arrayBuffer()).then((b) => ctx.decodeAudioData(b)).catch(() => null));
+      }
+      buffersVoz.get(url).then((buf) => {
+        if (!buf || pedido !== pedidoVoz) return;
+        const src = ctx.createBufferSource();
+        src.buffer = buf;
+        src.connect(mestre);
+        src.start();
+        vozAtual = src;
+      });
+    },
     // `volume` (0 a 1): para sons à distância (pistas do Fiscal).
     tocar(id, volume = 1) {
       if (!ctx || !SONS[id]) return;

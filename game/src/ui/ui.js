@@ -207,14 +207,15 @@ export function criarUI(root, { toque = false } = {}) {
     escurecer(v) { camadas.escuro.classList.toggle('ativo', v); },
 
     // Diálogo: avança com E, Espaço ou clique.
-    dialogo(nome, falas, onFim) {
+    // `aoMostrar(texto)`: chamado a cada fala (para tocar a dublagem) e com null ao fechar.
+    dialogo(nome, falas, onFim, aoMostrar) {
       let i = 0;
       const caixa = el('div', 'dialogo', `<div class="nome">${esc(nome)}</div><div class="texto"></div><div class="seguir">${toque ? 'toque para continuar' : '[E] continuar'}</div>`);
-      const mostrar = () => { caixa.querySelector('.texto').textContent = falas[i]; };
+      const mostrar = () => { caixa.querySelector('.texto').textContent = falas[i]; aoMostrar?.(falas[i]); };
       const avancar = () => {
         i++;
         if (i < falas.length) { mostrar(); return; }
-        caixa.remove(); modal = null; onFim?.();
+        caixa.remove(); modal = null; aoMostrar?.(null); onFim?.();
       };
       modal = { tecla(code) { if (code !== 'KeyE' && code !== 'Space' && code !== 'Enter') return false; avancar(); return true; } };
       caixa.addEventListener('click', avancar);

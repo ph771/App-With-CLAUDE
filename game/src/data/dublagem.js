@@ -31,6 +31,41 @@ const FALAS = {
     'Valeu! Ainda tava ao vivo. 3 pessoas assistindo.',
     'Meu voto é não. Pelo menos alguém aqui vota alguma coisa.',
   ],
+  moraez: [
+    'Este fiscal está sob investigação.',
+    'O perfil dele está suspenso. O banheiro também, se precisar.',
+    'Aqui está uma ordem de suspensão. Use com moderação.',
+    'Tenho aqui um mandado para o Fiscal. Entregue em mãos.',
+    'Chegue perto dele e entregue. Ele vai parar para ler. Todos param.',
+    'Mandado cumprido. Excelente trabalho.',
+    'Voto não. E o projeto está suspenso até segunda ordem.',
+  ],
+  nicolas: [
+    'Ele pegou minha peruca emprestada pra um vídeo e não devolveu.',
+    'Fica com a reserva. Com ela ele te confunde com outra pessoa.',
+    'A peruca reserva sumiu. Vi o Fiscal entrando no banheiro feminino com ela.',
+    'Dá pra buscar?',
+    'Ufa. Fica com a outra, eu tenho várias.',
+    'Voto não. Mas devolve a minha peruca.',
+  ],
+  jairo: [
+    'Esse rapaz aí? Mandei ele cuidar do banheiro pra parar de me ligar, talkey?',
+    'Banheiro não é prioridade. Prioridade é pão com leite condensado.',
+    'Toma uma lata. Dá energia pra correr.',
+    'Tô sem energia, talkey? Preciso de leite condensado.',
+    'Tem na geladeira da copa.',
+    'Isso. Toma uma lata pra você também, talkey?',
+    'Voto não, talkey? Banheiro não é prioridade.',
+  ],
+  flavio: [
+    'Eu sou o 01 em tudo, mas aqui na fila da cabine eu sou o 02.',
+    'Meu pai mandou avisar que esse fiscal não é do partido.',
+    'Toma a chave da cabine 01. Lá dentro ele não te acha.',
+    'O papel do gabinete 01 acabou. O 01 não pode ficar sem papel.',
+    'Traz os rolos de papel do almoxarifado?',
+    'Valeu. O 01 agradece. O 02 também.',
+    'Voto não. O 01 vota primeiro... digo, segundo.',
+  ],
 };
 
 export const DUBLAGEM = {};

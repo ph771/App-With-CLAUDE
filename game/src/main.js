@@ -20,11 +20,13 @@ import { createNoite } from './logic/noite.js';
 import { createFerramentas } from './logic/ferramentas.js';
 import { createFolego, VELOCIDADE_CORRIDA } from './logic/folego.js';
 import { PERGUNTAS, PERGUNTA_FINAL } from './data/perguntas.js';
-import { ITENS } from './data/visitantes.js';
+import { ITENS, VISITANTES } from './data/visitantes.js';
 import { FERRAMENTAS, FITAS, DURACAO_PERSEGUICAO } from './data/noite.js';
 import { FAVORES } from './data/favores.js';
 import { createFavores } from './logic/favores.js';
 import { createRespiracao } from './logic/esconderijo.js';
+import { createSuspeita } from './logic/suspeita.js';
+import { salvarNoite, carregarNoite, apagarNoite } from './logic/salvar.js';
 import { PAGINAS } from './data/paginas.js';
 import { criarUI } from './ui/ui.js';
 import { criarAudio } from './audio.js';
@@ -130,6 +132,9 @@ const ferramentas = createFerramentas();
 const folego = createFolego();
 const favores = createFavores();
 const respiracao = createRespiracao();
+const suspeita = createSuspeita();
+// Números da noite para o relatório final (não voltam na derrota).
+const stats = { pego: 0, erros: 0, escondido: 0, fugiu: 0, fitas: 0, derrotas: 0, tempo: 0 };
 const OUVE_CORRIDA = 10; // metros: o Fiscal ouve você correndo
 
 // ---------- Personagens e objetos ----------
@@ -167,6 +172,9 @@ let tempoFita = FITA_A_CADA;
 let escondido = null; // esconderijo em que você está
 let prendendoAr = false; // Espaço (ou botão no celular)
 let perseg = { ativa: false, ultimo: null, busca: null, abrindo: 0, alarme: 0 };
+let ligacao = 'mudo'; // qual ligação está tocando
+let tempoPista = 6; // próxima pista de som do Fiscal (caneta, assobio)
+const perucasCaidas = []; // susto da peruca (somem na virada da hora)
 const objetosFavor = new Map(); // id do objeto → mesh
 let segurando = null; // id da tarefa que está sendo feita (segurar E)
 let checkpointExtra = null;
@@ -315,6 +323,8 @@ const sincronizarPocas = sincronizarTarefas;
 function tratarEvento(e) {
   if (e.tipo === 'hora') {
     dispensarVisitantes();
+    perucasCaidas.splice(0).forEach((m) => { scene.remove(m); descartar(m); });
+    if (e.hora >= 1 && e.hora <= 6 && modo === 'jogando') salvarAgora(e.hora);
     segurando = null;
     checkpointExtra = {
       efeitos: { ...efeitos, leite: null },
@@ -343,7 +353,7 @@ function tratarEvento(e) {
     return;
   }
   if (e.tipo === 'visitante') entrarVisitante(e.visitante);
-  if (e.tipo === 'telefone') { telefoneTocando = 20; proximoToque = 0; }
+  if (e.tipo === 'telefone') { ligacao = 'mudo'; telefoneTocando = 20; proximoToque = 0; }
   if (e.tipo === 'susto') comecarSusto(e.id);
   if (e.tipo === 'perseguicao') comecarPerseguicao();
 }
@@ -368,22 +378,40 @@ function comecarSusto(id) {
       audio.tocar('porta_bate');
       ui.legenda('', '(uma porta bateu em algum lugar do prédio)', 4);
       break;
-    case 'fiscal_monitor':
+    case 'fiscal_monitor': {
+      // Ele fica parado olhando direto para a câmera do corredor dos gabinetes.
+      const cam = PONTOS.cameraMonitor;
+      aparicao.position.set(cam.x - 3, 0, cam.z);
+      aparicao.rotation.y = Math.PI / 2;
+      aparicao.getObjectByName('peruca').visible = false;
+      aparicao.visible = true;
+      susto = { aparicaoAte: 9 };
+      audio.tocar('prancheta', 0.5);
+      ui.legenda('', '(O monitor da portaria... tem alguém olhando direto para a câmera.)', 5);
+      break;
+    }
+    case 'peruca_corredor': {
+      // A peruca dele caída bem na sua frente. Ninguém por perto.
+      let p = frente(2.4);
+      if (!regiaoDe(p)) p = frente(1.2);
+      const peruca = criarObjetoFavor('peruca_nicolas');
+      peruca.position.set(p.x, 0, p.z);
+      scene.add(peruca);
+      perucasCaidas.push(peruca);
       audio.tocar('passo_molhado');
-      ui.legenda('', '(Tem alguém parado no corredor dos gabinetes, lá em cima. Confira o monitor.)', 5);
+      ui.legenda('', '(uma peruca loira... caída bem na sua frente. Ainda quente.)', 4.5);
       break;
-    case 'fiscal_cabine':
-      audio.tocar('susto'); ui.flash();
-      mostrarAparicao(frente(1.6), 0.9);
-      break;
+    }
     case 'luz_apaga':
+      // No escuro, só a caneta clicando em volta de você.
       audio.tocar('interruptor');
-      apagao = 4;
-      agendar(3, () => { mostrarAparicao(frente(2), 0.7); audio.tocar('susto'); });
+      apagao = 5;
+      [0.8, 1.7, 2.6, 3.5, 4.2].forEach((t, i) => agendar(t, () => audio.tocar('prancheta', 0.3 + i * 0.15)));
       break;
-    case 'batidas_cabine':
-      audio.tocar('batida');
-      ui.legenda('', '(batidas numa das cabines...)', 4);
+    case 'telefone_relatorio':
+      ligacao = 'relatorio';
+      telefoneTocando = 25; proximoToque = 0;
+      ui.legenda('', '(o telefone da portaria está tocando)', 4);
       break;
     case 'fiscal_espelho': {
       const p = jogador.posicao(), d = jogador.direcao();
@@ -443,7 +471,8 @@ function abrirPergunta(final = false) {
   segurando = null;
   ui.progresso(null);
   if (escondido) sairEsconderijo();
-  if (!final) jogador.olharPara(fiscal.posicao());
+  if (!final) { jogador.olharPara(fiscal.posicao()); stats.pego++; }
+  suspeita.zerar();
   audio.tocar('passo_molhado');
   const limite = final || clock.hora() >= 4 ? 4 : 5;
   const sorteada = quiz.iniciar(final, limite);
@@ -466,6 +495,7 @@ function fecharPergunta(segura) {
     if (final) { terminarNoite(); return; }
     ui.legenda('Fiscal Pavonato', 'Tá, tá... pode ir.', 3);
   } else if (segura === false) {
+    stats.erros++;
     audio.tocar('erro'); ui.flash();
     ui.legenda('Fiscal Pavonato', '(sorri e anota alguma coisa na prancheta)', 3);
     fiscal.errou();
@@ -503,10 +533,24 @@ function terminarNoite() {
     ui.escurecer(true);
     setTimeout(() => {
       ui.escurecer(false);
-      ui.vitoria(resultado, paginasLidas.size === PAGINAS.length, () => {
+      apagarNoite(armazenamento);
+      const min = Math.floor(stats.tempo / 60), seg = Math.round(stats.tempo % 60);
+      ui.estatisticas([
+        ['Resultado', resultado === 'arquivado' ? 'PL ARQUIVADO' : 'PL APROVADO'],
+        ['Horas aprovadas', `${noite.relatorio().filter((r) => r === 'aprovado').length}/6`],
+        ['Votos NÃO', `${votos.size}/8`],
+        ['Vezes que ele te pegou', String(stats.pego)],
+        ['Respostas com "trans"', String(stats.erros)],
+        ['Perseguições escapadas', String(stats.fugiu)],
+        ['Tempo escondido', `${Math.round(stats.escondido)} s`],
+        ['Fitas arrancadas', String(stats.fitas)],
+        ['Páginas da prancheta', `${paginasLidas.size}/${PAGINAS.length}`],
+        ['Derrotas', String(stats.derrotas)],
+        ['Tempo de plantão', `${min}:${String(seg).padStart(2, '0')}`],
+      ], () => ui.vitoria(resultado, paginasLidas.size === PAGINAS.length, () => {
         audio.tocar('telefone');
         ui.posCreditos(() => location.reload());
-      });
+      }));
     }, 1600);
   }, 2600);
 }
@@ -715,6 +759,7 @@ function terminarPerseguicao(sobreviveu) {
   fiscal.pararPerseguicao();
   ui.alerta(false);
   if (sobreviveu) {
+    stats.fugiu++;
     fiscal.tregua(12);
     cacador.cacando = 0;
     ui.aviso('Ele desistiu... por enquanto.', 3);
@@ -766,6 +811,20 @@ function lerPagina(i) {
 
 function atenderTelefone() {
   telefoneTocando = 0;
+  if (ligacao === 'relatorio') {
+    // Ele lê o SEU relatório da noite.
+    const rel = noite.relatorio();
+    const aprov = rel.filter((r) => r === 'aprovado').length, reprov = rel.filter((r) => r === 'reprovado').length;
+    const falas = [
+      'Alô. Aqui é a fiscalização. Estou com o seu relatório na mão.',
+      `Horas aprovadas: ${aprov}. Reprovadas: ${reprov}. Interessante...`,
+      `Vezes que eu te encontrei: ${stats.pego}. Respostas suspeitas: ${stats.erros}.`,
+      stats.escondido > 20 ? `E ${Math.round(stats.escondido)} segundos escondido em cabine. Muito suspeito.` : 'Você não se esconde muito, né? Corajoso. Ou TRANSloucado.',
+      '... Estou indo aí. *clique*',
+    ];
+    falas.forEach((f, i) => agendar(i * 3.2, () => ui.legenda('Telefone', f, 3.4)));
+    return;
+  }
   ui.legenda('Telefone', '(silêncio... só uma respiração do outro lado)', 3.5);
   agendar(3.5, () => ui.legenda('Telefone', 'Alôôôô? ... É da limpeza? Tô indo aí fiscalizar.', 4.5));
 }
@@ -793,6 +852,7 @@ function atualizarSegurando(dt) {
   audio.tocar(t.ferramenta === 'esfregao' ? 'pano' : t.ferramenta === 'rolos' ? 'papel' : 'acerto');
   acaoFim();
   sincronizarPocas();
+  if (t.fita) stats.fitas++;
   if (t.id === 'painel') { comecarFinal(); return; }
   const faltam = noite.tarefas().filter((x) => !x.feita).length;
   ui.aviso(faltam ? `✔ ${t.texto} — faltam ${faltam}` : '✔ Tudo feito nesta hora!', 2);
@@ -832,6 +892,7 @@ document.addEventListener('pointerlockerror', () => { if (modo === 'jogando' && 
 // ---------- Derrota e checkpoint ----------
 function perder() {
   modo = 'derrota';
+  stats.derrotas++;
   agendados = [];
   acaoFim();
   if (perguntaAberta) { perguntaAberta.controles.fechar(); perguntaAberta = null; }
@@ -884,18 +945,35 @@ function alvoDoFiscal(pj, minuto, dt) {
   const fp = fiscal.posicao();
   const seguro = minuto < 240 && SALAS_SEGURAS.includes(regiaoDe(pj));
   const distancia = Math.hypot(fp.x - pj.x, fp.z - pj.z);
-  const meVe = !seguro && mesmoAndar(fp, pj) && distancia < 9 && temVisao(fp, pj, PAREDES);
-  // Correr faz barulho: ele ouve e vem, mesmo sem te ver.
-  const meOuve = !seguro && correndo && mesmoAndar(fp, pj) && distancia < OUVE_CORRIDA;
-  if (meVe) cacador.cacando = 7;
-  else if (meOuve) cacador.cacando = Math.max(cacador.cacando, 5);
-  else cacador.cacando = Math.max(0, cacador.cacando - dt);
-  if (cacador.cacando > 0) return pj;
+  const vendo = !seguro && !escondido && mesmoAndar(fp, pj) && distancia < 9 && temVisao(fp, pj, PAREDES);
+  // Correr faz barulho: ele ouve, mas demora mais para ter certeza.
+  const ouvindo = !seguro && correndo && mesmoAndar(fp, pj) && distancia < OUVE_CORRIDA;
+  if (cacador.cacando > 0) {
+    cacador.cacando = vendo ? 7 : Math.max(0, cacador.cacando - dt);
+    if (cacador.cacando > 0) return pj;
+    suspeita.zerar();
+  } else if (suspeita.update(dt, { minuto, vendo, ouvindo }) === 'cacar') {
+    cacador.cacando = 7;
+    audio.tocar('prancheta');
+    ui.legenda('Fiscal Pavonato', 'Ei! Você aí! Parado!', 2.5);
+    return pj;
+  }
   // Chegou no ponto de ronda (ou é inalcançável): sorteia outro.
   if (Math.hypot(fp.x - cacador.ronda.x, fp.z - cacador.ronda.z) < 0.8) {
     cacador.ronda = PONTOS_RONDA[Math.floor(Math.random() * PONTOS_RONDA.length)];
   }
   return cacador.ronda;
+}
+
+// Pistas de som: o Fiscal fora da sua vista se denuncia pela caneta e pelo assobio.
+function pistasDeSom(dt, pj, fp, minuto) {
+  tempoPista -= dt;
+  if (tempoPista > 0) return;
+  tempoPista = 5 + Math.random() * 5;
+  if (!fiscal.visivel(minuto) || minuto < 120 || !mesmoAndar(pj, fp)) return;
+  const d = Math.hypot(fp.x - pj.x, fp.z - pj.z);
+  if (d > 22 || temVisao(fp, pj, PAREDES)) return;
+  audio.tocar(Math.random() < 0.6 ? 'prancheta' : 'assobio', Math.max(0.15, 1 - d / 22));
 }
 
 function atualizar(dt, t) {
@@ -943,7 +1021,11 @@ function atualizar(dt, t) {
     const r = fiscal.update(dt, { minuto, jogador: escondido ? { x: 1e6, z: 1e6 } : pj, alvo, olhando });
     if (r === 'alcancou' && fiscal.visivel(minuto)) abrirPergunta(false);
     if (perseg.ativa && !fiscal.perseguindo() && !perguntaAberta) terminarPerseguicao(true);
+    pistasDeSom(dt, pj, fiscal.posicao(), minuto);
   }
+  ui.suspeita(suspeita.frac(), cacador.cacando > 0 || perseg.ativa);
+  stats.tempo += dt;
+  if (escondido) stats.escondido += dt;
   if (perseg.ativa) { perseg.alarme -= dt; if (perseg.alarme <= 0) { audio.tocar('alarme'); perseg.alarme = 1.2; } }
 
   // Respiração no esconderijo.
@@ -1048,14 +1130,45 @@ if (params.has('minuto')) {
   while (clock.minutos() < alvo) { clock.tick(0.1); noite.update().filter((e) => e.tipo !== 'hora_concluida').forEach(tratarEvento); }
 }
 
+// ---------- Salvar e continuar ----------
+function salvarAgora(hora) {
+  salvarNoite(armazenamento, {
+    hora, relatorio: noite.relatorio(), itens: inventario.itens(), votos: [...votos], favores: favores.snapshot(),
+    ferramenta: ferramentas.naMao(), cabineAberta, paginas: [...paginasLidas], stats: { ...stats },
+    visitantes: visitantes.filter((v) => v.estado !== 'feito').map((v) => ({ id: v.v.id, estado: v.estado === 'falando' ? 'esperando' : v.estado })),
+  });
+}
+
+function carregarSalvo(d) {
+  noite.carregar(d);
+  inventario.restaurar(d.itens);
+  votos = new Set(d.votos);
+  favores.restaurar(d.favores);
+  ferramentas.restaurar(d.ferramenta);
+  cabineAberta = d.cabineAberta;
+  mundo.portaCabine01.rotation.y = cabineAberta ? 1.3 : 0;
+  for (const i of d.paginas) { paginasLidas.add(i); scene.remove(paginasMesh[i]); }
+  Object.assign(stats, d.stats);
+  for (const v of d.visitantes) {
+    const dados = VISITANTES.find((x) => x.id === v.id);
+    if (!dados || visitantes.some((x) => x.v.id === v.id)) continue;
+    entrarVisitante(dados, true);
+    visitantes[visitantes.length - 1].estado = v.estado;
+  }
+  atualizarMao();
+  sincronizarFavores();
+}
+
 // ---------- Início ----------
-function comecar() {
+function comecar(salvo = null) {
+  if (salvo) carregarSalvo(salvo);
   audio.iniciar();
   audio.ambiente(true);
   modo = 'jogando';
   ui.mostrarHud(true);
   noite.update().forEach(tratarEvento);
-  ui.legenda('', 'Às 06:00 vota-se o PL do Banheiro Fiscalizado. Deixe o relatório de limpeza perfeito para arquivar o projeto.', 7);
+  if (salvo) ui.aviso(`Plantão retomado às ${String(salvo.hora).padStart(2, '0')}:00.`, 3);
+  else ui.legenda('', 'Às 06:00 vota-se o PL do Banheiro Fiscalizado. Deixe o relatório de limpeza perfeito para arquivar o projeto.', 7);
   if (controlesToque) {
     controlesToque.mostrar(true);
     document.documentElement.requestFullscreen?.().then(() => screen.orientation?.lock?.('landscape')).catch(() => {});
@@ -1077,7 +1190,11 @@ if (params.has('galeria')) {
   jogador.olharPara({ x: 0, z: 0 });
   modo = 'galeria';
 } else {
-  ui.telaInicial(comecar, abrirConfig, { versao: VERSAO, dicaIOS: instalador.dicaIOS() });
+  const salvo = carregarNoite(armazenamento);
+  ui.telaInicial(() => { apagarNoite(armazenamento); comecar(); }, abrirConfig, {
+    versao: VERSAO, dicaIOS: instalador.dicaIOS(),
+    continuar: salvo ? { rotulo: `Continuar (${String(salvo.hora).padStart(2, '0')}:00)`, acao: () => comecar(salvo) } : null,
+  });
   if (instalador.podeInstalar()) ui.botaoInstalar(() => instalador.instalar());
 }
 // ?ver=x,z,alvoX,alvoZ posiciona a câmera (para prints de teste).
@@ -1098,8 +1215,8 @@ window.__jogo = {
     relatorio: noite.relatorio(), naMao: ferramentas.naMao(), votos: votos.size, paginas: paginasLidas.size,
     tarefas: noite.tarefas().map((x) => `${x.id}:${x.feita ? 1 : 0}`), segurando, correndo, folego: folego.frac(),
   }),
-  comecar, abrirPergunta, pegarFerramenta, acaoInicio, acaoFim, lerPagina,
-  favores, comecarPerseguicao, entrarEsconderijo, sairEsconderijo, perseg: () => perseg, escondido: () => escondido?.id ?? null,
+  comecar, terminarNoite, abrirPergunta, pegarFerramenta, acaoInicio, acaoFim, lerPagina,
+  favores, comecarPerseguicao, stats, suspeita, salvarAgora, comecarSusto, entrarEsconderijo, sairEsconderijo, perseg: () => perseg, escondido: () => escondido?.id ?? null,
   prenderAr: (v) => { prendendoAr = v; },
   correr: (v) => { shift = v; },
   proximoAlvo, regiaoDe,

@@ -25,11 +25,12 @@ export function criarUI(root, { toque = false } = {}) {
     respiracao: el('div', 'respiracao oculto', '<div class="rotulo"></div><div class="barra"><div></div></div>'),
     alerta: el('div', 'alerta-vermelho'),
     frestas: el('div', 'frestas oculto'),
+    olho: el('div', 'olho oculto', '<div class="globo"><div class="enche"></div><div class="pupila"></div></div><span class="marca"></span>'),
     flash: el('div', 'flash'),
     escuro: el('div', 'escuro'),
   };
   const hud = el('div', 'oculto');
-  for (const k of ['mira', 'tarefas', 'relogio', 'erros', 'itens', 'dica', 'legenda', 'progresso', 'folego', 'respiracao']) hud.append(camadas[k]);
+  for (const k of ['mira', 'tarefas', 'relogio', 'erros', 'itens', 'dica', 'legenda', 'progresso', 'folego', 'respiracao', 'olho']) hud.append(camadas[k]);
   root.append(camadas.frestas, camadas.alerta, hud, camadas.carimbo, camadas.toast, camadas.flash, camadas.escuro, el('div', 'aviso-girar', 'Deite o celular<br>para jogar'));
   let aoTocarItem = null;
   camadas.itens.addEventListener('click', (e) => {
@@ -55,7 +56,7 @@ export function criarUI(root, { toque = false } = {}) {
   return {
     ocupado: () => modal !== null,
 
-    telaInicial(onJogar, onConfig, { versao, dicaIOS } = {}) {
+    telaInicial(onJogar, onConfig, { versao, dicaIOS, continuar } = {}) {
       const t = telaCheia(`
         <h1>PLANTÃO NO BANHEIRO</h1>
         <h2>Episódio 1 — A Votação do Banheiro</h2>
@@ -73,6 +74,17 @@ export function criarUI(root, { toque = false } = {}) {
         t.querySelector('.conteudo').append(b);
       }
       t.classList.add('tela-inicial');
+      if (continuar) {
+        // Tem noite salva: "Continuar" vira o botão principal; o outro começa do zero.
+        const principal = t.querySelector('.botao');
+        principal.textContent = 'Novo plantão';
+        principal.classList.add('secundario');
+        const b = el('button', 'botao', esc(continuar.rotulo));
+        b.type = 'button';
+        b.addEventListener('click', () => { t.remove(); continuar.acao(); });
+        principal.before(b);
+        setTimeout(() => b.focus(), 60);
+      }
       if (dicaIOS) t.querySelector('.conteudo').append(el('p', 'controles', 'Para instalar no iPhone: toque em Compartilhar e depois em <b>Adicionar à Tela de Início</b>.'));
       if (versao) t.querySelector('.conteudo').append(el('p', 'versao', `versão ${esc(versao)}`));
     },
@@ -135,6 +147,21 @@ export function criarUI(root, { toque = false } = {}) {
     // Tela pulsando em vermelho durante a perseguição.
     alerta(ligado) { camadas.alerta.classList.toggle('ativo', ligado); },
     frestas(v) { camadas.frestas.classList.toggle('oculto', !v); },
+    // Olho da suspeita: enche enquanto o Fiscal te nota; "!" quando ele está caçando.
+    suspeita(frac, cacando) {
+      const visivel = cacando || frac > 0.03;
+      camadas.olho.classList.toggle('oculto', !visivel);
+      if (!visivel) return;
+      camadas.olho.classList.toggle('cacando', cacando);
+      camadas.olho.querySelector('.enche').style.width = `${Math.round((cacando ? 1 : frac) * 100)}%`;
+      camadas.olho.querySelector('.marca').textContent = cacando ? '!' : '?';
+    },
+
+    // Relatório final do zelador (bom para print no fim do vídeo).
+    estatisticas(linhas, onContinuar) {
+      const grade = linhas.map(([rotulo, valor]) => `<div class="estat"><span>${esc(rotulo)}</span><b>${esc(valor)}</b></div>`).join('');
+      telaCheia(`<h1>RELATÓRIO FINAL DO ZELADOR</h1><div class="estatisticas">${grade}</div>`, 'Continuar', onContinuar);
+    },
 
     // Barra de fôlego (some quando está cheia).
     folego(frac, cansado) {

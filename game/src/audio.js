@@ -1,5 +1,6 @@
 // Sons sintetizados com Web Audio (sem arquivos).
 export function criarAudio() {
+  let destino = null; // saída dos efeitos (troca para sons com volume menor)
   let ctx = null, mestre = null, efeitos = null, ambienteBus = null, zumbido = null, ambienteNos = null;
   const volumeAmbiente = 1;
   let volumes = { geral: 0.8, efeitos: 0.8, ambiente: 0.6 };
@@ -36,7 +37,7 @@ export function criarAudio() {
     g.gain.exponentialRampToValueAtTime(pico, t0 + ataque);
     g.gain.exponentialRampToValueAtTime(0.0001, t0 + duracao);
     no.connect(g);
-    g.connect(efeitos);
+    g.connect(destino ?? efeitos);
     return g;
   }
 
@@ -76,6 +77,8 @@ export function criarAudio() {
     entrada: (t) => { tom(988, 'sine', t, 0.4, 0.15); tom(784, 'sine', t + 0.25, 0.6, 0.15); },
     papel: (t) => ruidoFiltrado(t, 0.6, 3000, 0.6, 0.25),
     pano: (t) => { ruidoFiltrado(t, 0.5, 1200, 0.8, 0.25); ruidoFiltrado(t + 0.5, 0.5, 1000, 0.8, 0.25); },
+    prancheta: (t) => { tom(2400, 'square', t, 0.02, 0.25); tom(1800, 'square', t + 0.05, 0.02, 0.2); },
+    assobio: (t) => { [0, 0.28, 0.56, 0.9].forEach((d, i) => tom([988, 880, 784, 659][i], 'sine', t + d, 0.24, 0.12, [1047, 932, 830, 622][i])); },
     alarme: (t) => { tom(880, 'square', t, 0.25, 0.1, 660); tom(660, 'square', t + 0.3, 0.25, 0.1, 880); },
     fita: (t) => { ruidoFiltrado(t, 0.35, 2500, 1.2, 0.35); ruidoFiltrado(t + 0.12, 0.25, 1800, 1.2, 0.3); },
     rangido: (t) => { tom(180, 'sawtooth', t, 0.9, 0.12, 120); tom(240, 'sawtooth', t + 0.1, 0.7, 0.06, 160); },
@@ -86,9 +89,13 @@ export function criarAudio() {
   return {
     iniciar,
     definirVolumes(v) { volumes = { ...volumes, ...v }; aplicarVolumes(); },
-    tocar(id) {
+    // `volume` (0 a 1): para sons à distância (pistas do Fiscal).
+    tocar(id, volume = 1) {
       if (!ctx || !SONS[id]) return;
+      const antes = destino;
+      if (volume < 1) { destino = ctx.createGain(); destino.gain.value = Math.max(0, volume); destino.connect(efeitos); }
       SONS[id](ctx.currentTime + 0.01);
+      destino = antes;
     },
     // Ambiente de terror: drone grave e baixo. `nivel` (0 a 1) = quão perto o Fiscal está.
     ambiente(ligado) {

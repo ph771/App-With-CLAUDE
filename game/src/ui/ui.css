@@ -198,3 +198,19 @@ body.toque .folego { bottom: calc(110px + env(safe-area-inset-bottom, 0px)); }
 .frestas { position: fixed; inset: 0; pointer-events: none;
   background: repeating-linear-gradient(180deg, #050606 0, #050606 26px, transparent 26px, transparent 44px),
               radial-gradient(ellipse at center, transparent 30%, #050606 85%); }
+
+/* ---------- Olho da suspeita ---------- */
+.olho { position: absolute; left: 50%; top: calc(64px + env(safe-area-inset-top, 0px)); transform: translateX(-50%); display: flex; align-items: center; gap: 8px; }
+.olho .globo { position: relative; width: 64px; height: 30px; border: 3px solid var(--texto); border-radius: 50% / 50%; overflow: hidden; background: rgba(0,0,0,0.6); }
+.olho .enche { position: absolute; inset: 0 auto 0 0; background: var(--destaque); opacity: 0.85; }
+.olho .pupila { position: absolute; left: 50%; top: 50%; width: 12px; height: 12px; margin: -6px; border-radius: 50%; background: #111; }
+.olho .marca { font-size: 1.6em; color: var(--destaque); min-width: 0.6em; }
+.olho.cacando .globo { border-color: var(--perigo); }
+.olho.cacando .enche { background: var(--perigo); }
+.olho.cacando .marca { color: var(--perigo); }
+
+/* ---------- Relatório final ---------- */
+.estatisticas { display: grid; grid-template-columns: repeat(auto-fit, minmax(12em, 1fr)); gap: 8px; margin: 1em 0; text-align: left; }
+.estat { border: 1px solid var(--borda); background: rgba(20, 28, 22, 0.8); padding: 8px 12px; display: flex; justify-content: space-between; gap: 12px; align-items: baseline; }
+.estat span { color: var(--apagado); }
+.estat b { color: var(--destaque); font-size: 1.4em; font-weight: normal; font-variant-numeric: tabular-nums; }

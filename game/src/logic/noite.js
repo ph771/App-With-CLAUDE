@@ -119,6 +119,14 @@ export function createNoite({ clock, fiscal, inventario, quiz }) {
       fase = clock.terminou() ? 'final' : 'jogando';
     },
     // Fim da noite: devolve o resultado da votação.
+    // Continua uma noite salva: vai para o começo da hora salva; o que veio antes já aconteceu.
+    carregar({ hora, relatorio: rel }) {
+      clock.restaurar({ minutos: hora * 60 });
+      disparados = new Set(AGENDA.filter((a) => a.minuto < hora * 60).map((a) => a.chave));
+      relatorio = [...rel];
+      horaAtual = -1;
+      fase = 'jogando';
+    },
     vencer() {
       fase = 'vitoria';
       return relatorio.every((r) => r === 'aprovado') ? 'arquivado' : 'aprovado_pl';

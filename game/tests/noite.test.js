@@ -98,7 +98,7 @@ test('voltarCheckpoint: tarefas e fitas zeram, relatório e eventos voltam', () 
   assert.equal(n.inventario.tem('ordem'), false);
   assert.deepEqual(n.noite.relatorio().slice(0, 3), ['reprovado', 'reprovado', null]);
   const ev = ate(n, 150);
-  assert.ok(ev.some((e) => e.tipo === 'susto' && e.id === 'fiscal_cabine'));
+  assert.ok(ev.some((e) => e.tipo === 'susto' && e.id === 'peruca_corredor'));
 });
 
 test('visitantes saem logo no começo da hora', () => {
@@ -129,3 +129,15 @@ test('3 erros → derrota', () => {
 });
 
 test('6 sustos programados', () => assert.equal(SUSTOS.length, 6));
+
+test('carregar uma noite salva: começa no início da hora, com o relatório salvo', () => {
+  const n = montar();
+  n.noite.carregar({ hora: 3, relatorio: ['aprovado', 'reprovado', 'aprovado', null, null, null] });
+  const ev = n.noite.update();
+  assert.equal(n.clock.formatar(), '03:00');
+  assert.ok(ev.some((e) => e.tipo === 'hora' && e.hora === 3));
+  assert.ok(!ev.some((e) => e.tipo === 'hora_concluida'));
+  assert.ok(!ev.some((e) => e.tipo === 'visitante' && e.visitante.minuto < 180), 'visitantes de antes não voltam');
+  assert.deepEqual(n.noite.relatorio(), ['aprovado', 'reprovado', 'aprovado', null, null, null]);
+  assert.deepEqual(n.noite.tarefas().map((t) => t.id), HORAS[3].map((t) => t.id));
+});

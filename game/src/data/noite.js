@@ -36,9 +36,9 @@ export const TAREFA_FINAL = t('painel', 'Entregar o relatório no painel de vota
 export const SUSTOS = [
   { minuto: 20, id: 'porta_familia' },
   { minuto: 65, id: 'fiscal_monitor' },
-  { minuto: 145, id: 'fiscal_cabine' },
-  { minuto: 195, id: 'luz_apaga' },
-  { minuto: 260, id: 'batidas_cabine' },
+  { minuto: 145, id: 'peruca_corredor' }, // a peruca dele caída na sua frente
+  { minuto: 195, id: 'luz_apaga' }, // no escuro, só a caneta clicando em volta
+  { minuto: 260, id: 'telefone_relatorio' }, // ele liga e lê o seu relatório
   { minuto: 320, id: 'fiscal_espelho' },
 ];
 export const TELEFONEMAS = [{ minuto: 30, id: 'telefone_mudo' }];

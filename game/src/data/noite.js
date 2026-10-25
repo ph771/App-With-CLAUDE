@@ -26,7 +26,9 @@ export const HORAS = [
   ],
   [
     t('tribuna', 'Limpar a tribuna', 'Plenário · 1º andar', 'esfregao', { x: 100, z: -17 }, 3),
-    t('papel_fem_t2', 'Repor papel de novo', 'Banheiro feminino · térreo', 'rolos', { x: 17.6, z: -8.6 }, 2),
+    // Última hora toda no 1º andar e com a mesma ferramenta (o teste de equilíbrio mostrou que
+    // descer ao térreo para trocar de ferramenta tornava a hora quase impossível).
+    t('cafe_imprensa', 'Limpar o café derramado', 'Sala de imprensa · 1º andar', 'esfregao', { x: 84.2, z: -5.6 }, 3),
   ],
 ];
 

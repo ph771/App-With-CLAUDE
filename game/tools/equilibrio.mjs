@@ -1,5 +1,6 @@
 // Teste de equilíbrio: um robô joga várias noites completas e mede quantas vezes o Fiscal pega.
-// Uso: node game/tools/equilibrio.mjs [--noites 4] [--paralelo 2] [--acelerar 8] [--perfil medio|bom]
+// Uso: node game/tools/equilibrio.mjs [--noites 4] [--paralelo 2] [--acelerar 8] [--perfil medio|bom] [--minuto 0]
+// --minuto N começa a noite mais tarde (para testar só as últimas horas).
 // Precisa do Chromium do Playwright (já instalado na nuvem).
 import { createRequire } from 'node:module';
 import { spawn } from 'node:child_process';
@@ -23,6 +24,7 @@ const PERFIS = {
 };
 const perfil = args.perfil ?? 'medio';
 const PORTA = 8093;
+const MINUTO = Number(args.minuto ?? 0);
 
 const servidor = spawn(process.execPath, [join(AQUI, 'serve.js')], { env: { ...process.env, PORT: String(PORTA) }, stdio: 'ignore' });
 await new Promise((r) => setTimeout(r, 800));
@@ -37,7 +39,7 @@ async function jogarNoite(n) {
     localStorage.setItem('plantao-config', JSON.stringify({ qualidade: 'retro', volumeGeral: 0 }));
     localStorage.removeItem('plantao-noite');
   });
-  await pagina.goto(`http://localhost:${PORTA}/index.html?semtrava=1&acelerar=${ACELERAR}`);
+  await pagina.goto(`http://localhost:${PORTA}/index.html?semtrava=1&acelerar=${ACELERAR}${MINUTO ? `&minuto=${MINUTO}` : ''}`);
   await pagina.waitForFunction(() => window.__jogo, null, { timeout: 60000 });
   await pagina.evaluate(`${robo}(${JSON.stringify({ ...PERFIS[perfil], perfil, semente: 1000 + n * 7919 })})`);
   await pagina.locator('button', { hasText: 'Começar' }).first().click();

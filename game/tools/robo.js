@@ -38,6 +38,8 @@
     // Escada: usa a interação de verdade.
     if (andarDe(p) !== andarDe(dest) && /^(Subir|Descer)/.test(j.interacao() ?? '')) { soltarTudo(); j.interagir(); espera = 0.8; return false; }
     let alvo = j.proximoAlvo(p, dest);
+    // Plenário: as fileiras de cadeiras não estão no mapa de rotas; uma pessoa usa o corredor central (x≈100).
+    if (j.regiaoDe(p) === 'plenario' && j.regiaoDe(dest) === 'plenario' && Math.abs(dest.z - p.z) > 1.5 && Math.abs(p.x - 100) > 1.2 && (dest.z < -15.5 || p.z < -15.5)) alvo = { x: 100, z: p.z };
     if (alvo.teleporte) { soltarTudo(); j.teleportar(alvo.x, alvo.z); return false; }
     // Travado num móvel: dá a volta de lado, como uma pessoa faria (e só em último caso "pula").
     if (ultimaPos && dist(ultimaPos, p) < 0.25 * 2.2 * dt) semProgresso += dt; else semProgresso = Math.max(0, semProgresso - dt);

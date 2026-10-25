@@ -46,6 +46,10 @@ function problema(g, t) {
   if (t.fita) { fita(g); return; }
   if (t.id === 'pano_portaria') { g.add(criarPoca()); pegadas(g); return; }
   if (t.poca || t.id === 'pano_vip') { g.add(criarPoca()); return; }
+  if (t.id === 'cafe_imprensa') { // café derramado no carpete
+    const cafe = criarPoca(); cafe.material = lambert(0x4a2e1a, { transparent: true, opacity: 0.85 }); cafe.scale.setScalar(0.8);
+    g.add(cafe); return;
+  }
   if (t.ferramenta === 'desentupidor') {
     const agua = criarPoca(); agua.material = lambert(0x6b6a4a, { transparent: true, opacity: 0.7 }); agua.scale.setScalar(1.3);
     g.add(agua); return;

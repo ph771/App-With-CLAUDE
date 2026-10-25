@@ -479,7 +479,8 @@ function abrirPergunta(final = false) {
   if (!final) { jogador.olharPara(fiscal.posicao()); stats.pego++; }
   suspeita.zerar();
   audio.tocar('passo_molhado');
-  const limite = final || clock.hora() >= 4 ? 4 : 5;
+  // 4 s para responder só às 04:00 e na pergunta final; na última hora volta a 5 s.
+  const limite = final || clock.hora() === 4 ? 4 : 5;
   const sorteada = quiz.iniciar(final, limite);
   // Respostas em letra normal: o "trans" não salta mais aos olhos.
   const mostrada = { ...sorteada, respostas: sorteada.respostas.map((r) => r.replace(/TRANS/g, 'trans')) };
@@ -676,8 +677,8 @@ function entregarMandado() {
 
 // ---------- Esconderijos ----------
 // Dentro do armário: esconde o móvel e mostra frestas na tela (você espia por elas).
-function mostrarArmario(v) {
-  const a = mundo.portaArmario();
+function mostrarArmario(v, id) {
+  const a = mundo.portaArmario(id);
   if (!a) return;
   for (const o of [a.porta, a.corpo, ...a.frestas]) o.visible = v;
 }
@@ -689,7 +690,7 @@ function entrarEsconderijo(e) {
   const porta = e.tipo === 'cabine' ? mundo.portasCabines[`${e.sala}|${e.numero}`] : null;
   if (porta) porta.rotation.y = 0.42;
   luzEsconderijo.intensity = 0.5;
-  mostrarArmario(e.tipo !== 'armario');
+  if (e.tipo === 'armario') mostrarArmario(false, e.id);
   ui.frestas(e.tipo === 'armario');
   jogador.teleportar(e.dentro);
   jogador.definirAltura(e.altura);
@@ -706,7 +707,7 @@ function sairEsconderijo() {
   const porta = e.tipo === 'cabine' ? mundo.portasCabines[`${e.sala}|${e.numero}`] : null;
   if (porta) porta.rotation.y = porta.userData.fechada;
   luzEsconderijo.intensity = 0;
-  mostrarArmario(true);
+  if (e.tipo === 'armario') mostrarArmario(true, e.id);
   ui.frestas(false);
   jogador.definirAltura();
   jogador.teleportar(e.fora);
@@ -745,11 +746,11 @@ function comecarPerseguicao() {
     return;
   }
   tentativasPerseg = 0;
-  // Ele surge a uns 14 m de você, no mesmo andar.
+  // Ele surge a uns 18 m de você, no mesmo andar (longe o bastante para dar tempo de fugir).
   const candidatos = [...PONTOS_RONDA, PONTOS.recomecoTerreo, PONTOS.recomeco1andar, PONTOS.origemFiscal]
     .filter((c) => mesmoAndar(c, pj))
     .map((c) => ({ c, d: Math.hypot(c.x - pj.x, c.z - pj.z) }));
-  const bons = candidatos.filter((x) => x.d >= 10 && x.d <= 22).sort((a, b) => Math.abs(a.d - 14) - Math.abs(b.d - 14));
+  const bons = candidatos.filter((x) => x.d >= 13 && x.d <= 26).sort((a, b) => Math.abs(a.d - 18) - Math.abs(b.d - 18));
   const escolha = (bons[0] ?? candidatos.sort((a, b) => b.d - a.d)[0])?.c ?? PONTOS.origemFiscal;
   fiscal.voltarParaOrigem(escolha);
   fiscal.perseguir(DURACAO_PERSEGUICAO);

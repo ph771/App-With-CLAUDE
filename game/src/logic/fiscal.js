@@ -6,7 +6,7 @@ const ESPERA_DISTRACAO = 5;
 export const VELOCIDADE_PERSEGUICAO = 2.9;
 
 export function velocidadeBase(minuto) {
-  if (minuto >= 300) return 1.0;
+  if (minuto >= 300) return 0.9;
   if (minuto >= 240) return 0.75;
   if (minuto >= 120) return 0.45;
   return 0;

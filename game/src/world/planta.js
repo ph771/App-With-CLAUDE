@@ -123,7 +123,8 @@ export const MOVEIS = [
   caixa('bancada', 123.4, 124, -9, -5, 0.9, { espelho: 'oeste', ouro: true }),
   caixa('prateleira', -30, -29.2, -6.5, -0.8, 2.2),
   caixa('prateleira', -27, -21, -9, -8.2, 2.2),
-  caixa('armario', -20.8, -20.1, -5.4, -4.2, 2.1), // armário de vassouras (esconderijo)
+  caixa('armario', -20.8, -20.1, -5.4, -4.2, 2.1, { id: 'armario_almox', porta: 'oeste' }), // armário de vassouras (esconderijo)
+  caixa('armario', 0.9, 2.1, -2.9, -2.35, 2.0, { id: 'armario_corredor', porta: 'norte' }), // armário do corredor do térreo (esconderijo)
   caixa('mesa', 22.5, 25.5, -4, -2.6, 0.8, { modelo: 'copa' }),
   caixa('balcao', 27.4, 28, -5.5, -0.5, 1),
   caixa('tribuna', 97, 103, -19.2, -17.6, 1.2),
@@ -177,6 +178,7 @@ export const ESCONDERIJOS = [
     };
   }),
   { id: 'armario_almox', nome: 'Armário de vassouras', tipo: 'armario', fora: { x: -21.4, z: -4.8 }, dentro: { x: -20.45, z: -4.8 }, olhar: { x: -25, z: -4.8 }, altura: 1.55 },
+  { id: 'armario_corredor', nome: 'Armário do corredor', tipo: 'armario', fora: { x: 1.5, z: -1.65 }, dentro: { x: 1.5, z: -2.62 }, olhar: { x: 1.5, z: 3 }, altura: 1.55 },
   { id: 'mesa_imprensa', nome: 'Debaixo da mesa', tipo: 'mesa', fora: { x: 81, z: -7.6 }, dentro: { x: 81, z: -8.7 }, olhar: { x: 81, z: -4 }, altura: 0.45 },
   { id: 'tribuna', nome: 'Atrás da tribuna', tipo: 'tribuna', fora: { x: 104, z: -18.4 }, dentro: { x: 100, z: -19.55 }, olhar: { x: 100, z: -10 }, altura: 0.75 },
 ];

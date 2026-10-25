@@ -113,7 +113,7 @@ export function criarPredio(scene, { instanciar = () => null } = {}) {
 
   // Móveis.
   const espelhos = [];
-  let portaArmario = null;
+  const portasArmario = {};
   const madeiraClara = lambert({ color: 0x7a5530 });
   for (const m of MOVEIS) {
     switch (m.tipo) {
@@ -137,11 +137,15 @@ export function criarPredio(scene, { instanciar = () => null } = {}) {
         caixa(scene, m, 0.7, m.altura, madeiraClara); caixa(scene, { minX: m.minX + 0.1, maxX: m.minX + 0.2, minZ: m.minZ + 0.1, maxZ: m.minZ + 0.2 }, 0, 0.7, madeiraClara); caixa(scene, { minX: m.maxX - 0.2, maxX: m.maxX - 0.1, minZ: m.maxZ - 0.2, maxZ: m.maxZ - 0.1 }, 0, 0.7, madeiraClara); break;
       case 'armario': {
         const corpo = caixa(scene, m, 0, m.altura, lambert({ color: 0x5a6466 }));
-        // Porta com frestas, virada para dentro do almoxarifado (lado oeste).
-        const porta = caixa(scene, { minX: m.minX - 0.03, maxX: m.minX, minZ: m.minZ + 0.05, maxZ: m.maxZ - 0.05 }, 0.05, m.altura - 0.05, lambert({ color: 0x6f7a7c }));
-        for (let y = 1.5; y < 1.9; y += 0.08) caixa(scene, { minX: m.minX - 0.04, maxX: m.minX - 0.03, minZ: m.minZ + 0.25, maxZ: m.maxZ - 0.25 }, y, y + 0.02, lambert({ color: 0x111111 }));
-        portaArmario = { porta, corpo, frestas: [] };
-        scene.children.slice(-6).forEach((o) => { if (o !== porta && o !== corpo) portaArmario.frestas.push(o); });
+        // Porta com frestas no lado `m.porta` ('oeste' ou 'norte').
+        const norte = m.porta === 'norte';
+        const placa = (d0, d1, recuo) => (norte
+          ? { minX: m.minX + recuo, maxX: m.maxX - recuo, minZ: m.maxZ + d0, maxZ: m.maxZ + d1 }
+          : { minX: m.minX - d1, maxX: m.minX - d0, minZ: m.minZ + recuo, maxZ: m.maxZ - recuo });
+        const porta = caixa(scene, placa(0, 0.03, 0.05), 0.05, m.altura - 0.05, lambert({ color: 0x6f7a7c }));
+        const frestas = [];
+        for (let y = 1.5; y < 1.9; y += 0.08) frestas.push(caixa(scene, placa(0.03, 0.04, 0.25), y, y + 0.02, lambert({ color: 0x111111 })));
+        portasArmario[m.id] = { porta, corpo, frestas };
         break;
       }
       case 'balcao': {
@@ -271,7 +275,7 @@ export function criarPredio(scene, { instanciar = () => null } = {}) {
 
   return {
     luzes, espelhos, portaCabine01, portasCabines, telefone, ferramentas,
-    portaArmario: () => portaArmario,
+    portaArmario: (id) => portasArmario[id] ?? null,
     monitor: { alvo: alvoMonitor, camera: cameraMonitor, tela },
     escreverPainel,
   };

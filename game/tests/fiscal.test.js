@@ -38,7 +38,7 @@ test('fica mais rápido às 04:00 e às 05:00', () => {
   const a = novo(); passo(a, 2, { minuto: 250, jogador: longe, olhando: false });
   assert.ok(Math.abs(a.posicao().x - 1.5) < 1e-6);
   const b = novo(); passo(b, 2, { minuto: 310, jogador: longe, olhando: false });
-  assert.ok(Math.abs(b.posicao().x - 2) < 1e-6);
+  assert.ok(Math.abs(b.posicao().x - 1.8) < 1e-6); // 0,9 m/s na última hora (equilíbrio)
 });
 
 test('depois da rota vai direto ao jogador e avisa que alcançou', () => {

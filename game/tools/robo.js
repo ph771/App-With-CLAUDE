@@ -39,7 +39,13 @@
     if (andarDe(p) !== andarDe(dest) && /^(Subir|Descer)/.test(j.interacao() ?? '')) { soltarTudo(); j.interagir(); espera = 0.8; return false; }
     let alvo = j.proximoAlvo(p, dest);
     // Plenário: as fileiras de cadeiras não estão no mapa de rotas; uma pessoa usa o corredor central (x≈100).
-    if (j.regiaoDe(p) === 'plenario' && j.regiaoDe(dest) === 'plenario' && Math.abs(dest.z - p.z) > 1.5 && Math.abs(p.x - 100) > 1.2 && (dest.z < -15.5 || p.z < -15.5)) alvo = { x: 100, z: p.z };
+    // Atrás da tribuna (entre ela e a parede do fundo): sai pela ponta, contornando.
+    const atrasDaTribuna = (q) => q.z < -17.3 && q.x > 96.4 && q.x < 103.6;
+    if (j.regiaoDe(p) === 'plenario') {
+      if (atrasDaTribuna(p) && !atrasDaTribuna(dest)) alvo = { x: p.x < 100 ? 96 : 104, z: -19.4 };
+      else if (!atrasDaTribuna(p) && atrasDaTribuna(dest) && p.z > -17.3) alvo = { x: dest.x < 100 ? 96 : 104, z: Math.min(p.z, -15) };
+      else if (j.regiaoDe(dest) === 'plenario' && Math.abs(dest.z - p.z) > 1.5 && Math.abs(p.x - 100) > 1.2 && (dest.z < -15.5 || p.z < -15.5)) alvo = { x: 100, z: p.z };
+    }
     if (alvo.teleporte) { soltarTudo(); j.teleportar(alvo.x, alvo.z); return false; }
     // Travado num móvel: dá a volta de lado, como uma pessoa faria (e só em último caso "pula").
     if (ultimaPos && dist(ultimaPos, p) < 0.25 * 2.2 * dt) semProgresso += dt; else semProgresso = Math.max(0, semProgresso - dt);

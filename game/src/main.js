@@ -1139,11 +1139,17 @@ function atualizar(dt, t) {
   }
 }
 
+// ?acelerar=N (testes de equilíbrio): simula N passos por quadro, com as mesmas regras.
+const ACELERAR = Math.max(1, Math.min(20, Number(params.get('acelerar')) || 1));
+let aoQuadro = null; // robô de teste: roda antes de cada passo
 function loop(agora) {
   const dt = Math.min((agora - anterior) / 1000, 0.1);
   anterior = agora;
-  const t = agora / 1000;
-  if (modo === 'jogando' && !pausado) atualizar(dt, t);
+  for (let i = 0; i < ACELERAR; i++) {
+    const t = agora / 1000 + i * dt;
+    aoQuadro?.(dt);
+    if (modo === 'jogando' && !pausado) atualizar(dt, t);
+  }
   // O monitor só é desenhado quando você está na portaria.
   if (quadro++ % 3 === 0 && regiaoDe(jogador.posicao()) === 'portaria') ps1.renderEm(mundo.monitor.alvo, scene, mundo.monitor.camera);
   ps1.render(scene, camera);
@@ -1241,6 +1247,7 @@ window.__jogo = {
     relatorio: noite.relatorio(), naMao: ferramentas.naMao(), votos: votos.size, paginas: paginasLidas.size,
     tarefas: noite.tarefas().map((x) => `${x.id}:${x.feita ? 1 : 0}`), segurando, correndo, folego: folego.frac(),
   }),
+  definirAoQuadro: (fn) => { aoQuadro = fn; }, ACELERAR,
   comecar, terminarNoite, abrirPergunta, pegarFerramenta, acaoInicio, acaoFim, lerPagina,
   favores, comecarPerseguicao, vozesCacada: VOZES_CACADA, stats, suspeita, salvarAgora, comecarSusto, entrarEsconderijo, sairEsconderijo, perseg: () => perseg, escondido: () => escondido?.id ?? null,
   prenderAr: (v) => { prendendoAr = v; },

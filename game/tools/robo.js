@@ -28,7 +28,8 @@
   const soltarTudo = () => { for (const c of [...teclas]) segurar(c, false); j.correr(false); };
 
   let tempo = 0, pensando = 0, emPergunta = false, espera = 0, olharFiscal = false, decideOlhar = 0;
-  let visto = null, ultimaPos = null, semProgresso = 0, desvio = 0, desvioDir = null, tentativas = 0, andouBem = 0, depoisPerseg = 0, perseguindoAntes = false;
+  const evitar = new Set();
+  let visto = null, escolhido = null, ultimaPos = null, semProgresso = 0, desvio = 0, desvioDir = null, tentativas = 0, andouBem = 0, depoisPerseg = 0, perseguindoAntes = false;
 
   // Anda até `dest` com W/A/S/D relativas ao olhar (pode recuar olhando para o Fiscal).
   function irPara(dest, dt, correr, parada = 0.45) {
@@ -51,12 +52,13 @@
     } else if (semProgresso === 0) { andouBem += dt; if (andouBem > 2) tentativas = 0; }
     if (semProgresso > 0) andouBem = 0;
     const mx = alvo.x - p.x, mz = alvo.z - p.z, n = Math.hypot(mx, mz) || 1;
+    // Vira primeiro (para onde vai, ou para o Fiscal) e só então escolhe as teclas pelo olhar atual.
+    if (!olharFiscal) j.jogador.olharPara({ x: p.x + mx / n * 10, z: p.z + mz / n * 10 });
     const f = j.jogador.direcao();
     const frente = (mx * f.x + mz * f.z) / n, lado = (mx * -f.z + mz * f.x) / n;
     segurar('KeyW', frente > 0.38); segurar('KeyS', frente < -0.38);
     segurar('KeyD', lado > 0.38); segurar('KeyA', lado < -0.38);
     j.correr(correr);
-    if (!olharFiscal) j.jogador.olharPara({ x: p.x + mx / n * 10, z: p.z + mz / n * 10 });
     return false;
   }
 
@@ -172,21 +174,29 @@
       return;
     }
     if (perseg) {
+      olharFiscal = false; // fugindo, olha para onde corre
       // Como uma pessoa: primeiro foge até sair da vista dele, depois se esconde longe de onde ele te viu.
       const p = j.jogador.posicao(), f = j.fiscal.posicao();
       const meVe = andarDe(f) === andarDe(p) && temVisao(f, p, PAREDES);
       if (meVe) visto = { ...p };
       const base = visto ?? p;
-      const opcoes = ESCONDERIJOS.filter((x) => andarDe(x.fora) === andarDe(p) && !x.seguro)
-        .map((x) => ({ x, d: dist(x.fora, p) - (meVe ? dist(x.fora, f) * 1.5 : Math.min(dist(x.fora, base), 8) * 0.5) }))
+      // Sendo visto: corre para um esconderijo do lado oposto ao Fiscal (nunca fica parado esperando).
+      // Fora da vista: o mais perto que não seja onde ele te viu por último.
+      const opcoes = ESCONDERIJOS.filter((x) => andarDe(x.fora) === andarDe(p) && !x.seguro && !evitar.has(x) && (x === escolhido || !meVe || dist(x.fora, p) > 3))
+        .map((x) => ({ x, d: meVe ? dist(x.fora, p) - 2 * (dist(x.fora, f) - dist(x.fora, p)) : dist(x.fora, p) - Math.min(dist(x.fora, base), 8) * 0.5 }))
         .sort((a, b) => a.d - b.d);
-      const alvo = opcoes[0]?.x;
+      // Decide e mantém o esconderijo escolhido (só troca se o Fiscal ficar no caminho ou um for bem melhor).
+      // Chegou no esconderijo mas ele ainda te vê: desiste desse e continua correndo.
+      if (meVe && escolhido && dist(p, escolhido.fora) < 1.2) { evitar.add(escolhido); escolhido = null; }
+      const atual = opcoes.find((o) => o.x === escolhido);
+      if (!atual || dist(f, escolhido.fora) < dist(p, escolhido.fora) - 1 || opcoes[0].d < atual.d - 6) escolhido = opcoes[0]?.x ?? null;
+      const alvo = escolhido;
       if (alvo) {
         if (!meVe && dist(p, alvo.fora) < 0.8) { soltarTudo(); j.entrarEsconderijo(alvo); log.escondidas++; visto = null; return; }
-        irPara(alvo.fora, dt, true, meVe ? 0.1 : 0.45);
+        irPara(alvo.fora, dt, true);
         return;
       }
-    } else visto = null;
+    } else { visto = null; escolhido = null; evitar.clear(); }
 
     // Segurando E numa tarefa: espera terminar (olhando o Fiscal se ele chegar perto).
     if (e.segurando) { soltarTudo(); olhar(dt); return; }

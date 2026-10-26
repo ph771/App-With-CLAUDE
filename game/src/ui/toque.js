@@ -1,4 +1,4 @@
-// Controles de toque: analógico à esquerda, arrastar à direita para olhar, botão de ação e pausa.
+// Controles de toque: analógico à esquerda, arrastar à direita para olhar, botão de ação, pausa e largar ferramenta.
 import { vetorJoystick } from './toque-logica.js';
 
 const RAIO = 56; // px do analógico
@@ -11,7 +11,8 @@ export function criarControlesToque(antesDe) {
     <div class="toque-joy"><div class="toque-joy-base"><div class="toque-joy-pino"></div></div></div>
     <button class="toque-acao" type="button" aria-label="Ação">E</button>
     <button class="toque-pausa" type="button" aria-label="Pausar">II</button>
-    <button class="toque-respirar oculto" type="button">Prender o ar</button>`;
+    <button class="toque-respirar oculto" type="button">Prender o ar</button>
+    <button class="toque-largar oculto" type="button" aria-label="Largar ferramenta">Largar</button>`;
   antesDe.before(camada);
 
   const joy = camada.querySelector('.toque-joy');
@@ -21,6 +22,7 @@ export function criarControlesToque(antesDe) {
   const botaoAcao = camada.querySelector('.toque-acao');
   const botaoPausa = camada.querySelector('.toque-pausa');
   const botaoRespirar = camada.querySelector('.toque-respirar');
+  const botaoLargar = camada.querySelector('.toque-largar');
   let prendendo = false;
   botaoRespirar.addEventListener('pointerdown', (e) => { e.preventDefault(); prendendo = true; });
   for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) botaoRespirar.addEventListener(ev, () => { prendendo = false; });
@@ -84,6 +86,8 @@ export function criarControlesToque(antesDe) {
       for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) botaoAcao.addEventListener(ev, () => aoSoltar?.());
     },
     onPausa(cb) { botaoPausa.addEventListener('click', cb); },
+    onLargar(cb) { botaoLargar.addEventListener('pointerdown', (e) => { e.preventDefault(); cb(); }); },
+    mostrarLargar(v) { botaoLargar.classList.toggle('oculto', !v); },
     rotuloAcao(texto) {
       botaoAcao.textContent = texto ?? 'E';
       botaoAcao.classList.toggle('com-texto', Boolean(texto));

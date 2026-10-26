@@ -64,7 +64,7 @@ export function criarUI(root, { toque = false } = {}) {
         <p>Você é o zelador do turno da noite de um banheiro público 24h.<br>Sobreviva até as 06:00.</p>
         <p class="controles">${toque
           ? 'Analógico à esquerda: andar (até a borda: correr) · Arraste à direita: olhar · Botão amarelo: interagir · Toque nos itens para usar'
-          : 'Mouse: olhar · WASD: andar · Shift: correr · E: interagir (segure nas tarefas) · 1–8: usar item · Esc: pausar'}<br>
+          : 'Mouse: olhar · WASD: andar · Shift: correr · E: interagir (segure nas tarefas) · Q: largar ferramenta · 1–8: usar item · Esc: pausar'}<br>
         Quando o Fiscal perguntar, ${toque ? 'toque na resposta' : 'responda com 1, 2 ou 3'}. <b>Não diga nada com "trans".</b></p>
       `, 'Começar plantão', onJogar);
       if (onConfig) {
@@ -124,7 +124,7 @@ export function criarUI(root, { toque = false } = {}) {
           <span class="caixinha">${t.feita ? '✔' : ''}</span>
           <span class="txt">${esc(t.texto)}<small>${esc(t.onde ?? '')}${t.precisa ? ` · <b class="${t.temFerramenta ? 'ok' : 'falta'}">${esc(t.precisa)}</b>` : ''}</small></span>
         </div>`).join('')}
-        <div class="rodape">Na mão: <b>${esc(naMao ?? 'nada')}</b> · Votos NÃO: <b>${votos}/8</b> · Páginas: <b>${paginas}/8</b></div>
+        <div class="rodape">Na mão: <b>${esc(naMao ?? 'nada')}</b>${naMao && !toque ? ' <span class="dica-q">(Q larga)</span>' : ''} · Votos NÃO: <b>${votos}/8</b> · Páginas: <b>${paginas}/8</b></div>
         ${extras.map((x) => `<div class="rodape">${esc(x)}</div>`).join('')}`;
       camadas.erros.innerHTML = [0, 1, 2].map((i) => `<span class="${i < erros ? '' : 'vazio'}">✕</span>`).join('');
       const html = itens.map((it, i) => `<button type="button" class="item" data-i="${i}"><b>${it.tecla}</b> ${esc(it.nome)}</button>`).join('');

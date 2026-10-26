@@ -84,6 +84,12 @@
     if (olharFiscal) j.jogador.olharPara(f);
   }
 
+  // Onde está a ferramenta: no chão (se largou) ou na prateleira.
+  function buscarFerramenta(id) {
+    const chao = j.ferramentas.noChao()[id];
+    return chao ? { ponto: chao, texto: /^Pegar:/ } : { ponto: FERRAMENTAS_LUGAR[id], acao: () => j.pegarFerramenta(id) };
+  }
+
   function usarItem(id) {
     const i = j.inventario.itens().indexOf(id);
     if (i >= 0) j.tecla('Digit' + (i + 1));
@@ -100,7 +106,7 @@
     const esperando = e.visitantes.map((v) => v.split(':')).find(([id, st]) => st === 'esperando' && dist(p, LUGAR_VISITANTE[id]) < 12);
     if (esperando) return { ponto: LUGAR_VISITANTE[esperando[0]], texto: /^Falar com/ };
     if (tarefa) {
-      if (tarefa.ferramenta && e.naMao !== tarefa.ferramenta) return { ponto: FERRAMENTAS_LUGAR[tarefa.ferramenta], acao: () => j.pegarFerramenta(tarefa.ferramenta) };
+      if (tarefa.ferramenta && e.naMao !== tarefa.ferramenta) return buscarFerramenta(tarefa.ferramenta);
       return { ponto: tarefa.ponto, segurar: tarefa.texto };
     }
     return objetivoDeFavor(e);
@@ -116,7 +122,7 @@
         const o = j.favores.objetosVisiveis().find((x) => x.de === id);
         if (o) return { ponto: o.ponto, texto: /^Pegar:/ };
       }
-      if (fav.tipo === 'ferramenta' && e.naMao !== fav.ferramenta) return { ponto: FERRAMENTAS_LUGAR[fav.ferramenta], acao: () => j.pegarFerramenta(fav.ferramenta) };
+      if (fav.tipo === 'ferramenta' && e.naMao !== fav.ferramenta) return buscarFerramenta(fav.ferramenta);
       if (fav.tipo === 'filmar' || fav.tipo === 'mandado') {
         const f = j.fiscal.posicao();
         if (e.minuto >= 60) return { ponto: f, perto: fav.tipo === 'filmar' ? 4 : 1.6, texto: fav.tipo === 'mandado' ? /^Entregar o mandado/ : null, filmar: fav.tipo === 'filmar' };
@@ -173,7 +179,7 @@
 
     // Perseguição: corre para o esconderijo mais perto e se esconde.
     const perseg = j.perseg().ativa;
-    if (perseg && !perseguindoAntes) log.perseguicoes++;
+    if (perseg && !perseguindoAntes) { log.perseguicoes++; if (opts.largar !== false && e.naMao) { j.tecla('KeyQ'); log.largou = (log.largou || 0) + 1; } }
     perseguindoAntes = perseg;
     const esc = j.escondido();
     if (esc) {

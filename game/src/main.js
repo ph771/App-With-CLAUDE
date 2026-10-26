@@ -218,8 +218,40 @@ const perto = (a, b, r) => Math.hypot(a.x - b.x, a.z - b.z) <= r;
 function atualizarMao() {
   if (maoMesh) { camera.remove(maoMesh); descartar(maoMesh); maoMesh = null; }
   const id = ferramentas.naMao();
-  for (const [f, mesh] of Object.entries(mundo.ferramentas)) mesh.visible = f !== id;
+  const chao = ferramentas.noChao();
+  for (const [f, mesh] of Object.entries(mundo.ferramentas)) {
+    mesh.userData.prateleira ??= { pos: mesh.position.clone(), rot: mesh.rotation.clone() };
+    mesh.visible = f !== id;
+    if (chao[f]) { // deitada no chão
+      mesh.position.set(chao[f].x, 0.08, chao[f].z);
+      mesh.rotation.set(0, (chao[f].x * 7.3) % Math.PI, Math.PI / 2);
+    } else {
+      mesh.position.copy(mesh.userData.prateleira.pos);
+      mesh.rotation.copy(mesh.userData.prateleira.rot);
+    }
+  }
   if (id) { maoMesh = criarFerramentaNaMao(id); camera.add(maoMesh); }
+  controlesToque?.mostrarLargar(Boolean(id));
+}
+
+// Q: larga a ferramenta da mão no chão, um pouco à frente (anda mais rápido sem ela).
+function largarFerramenta() {
+  if (escondido || segurando) return;
+  const p = jogador.posicao(), d = jogador.direcao();
+  let ponto = { x: p.x + d.x * 0.6, z: p.z + d.z * 0.6 };
+  if (!temVisao(p, ponto, paredesAtuais())) ponto = p;
+  const id = ferramentas.largar(ponto);
+  if (!id) return;
+  atualizarMao();
+  audio.tocar('papel');
+  ui.aviso(`Você largou: ${FERRAMENTAS[id]} (fica no chão; E para pegar de novo)`, 2.5);
+}
+
+function pegarDoChao(id) {
+  const { largada } = ferramentas.pegarDoChao(id);
+  atualizarMao();
+  audio.tocar('item');
+  ui.aviso(largada ? `Trocou ${FERRAMENTAS[largada]} por ${FERRAMENTAS[id]}` : `Na mão: ${FERRAMENTAS[id]}`, 2);
 }
 
 function pegarFerramenta(id) {
@@ -639,7 +671,9 @@ function interacaoAtual() {
       acao: () => ui.aviso(`Precisa de ${FERRAMENTAS[t.ferramenta]}. Pegue no ALMOXARIFADO (térreo).`, 3),
     });
   }
+  for (const [id, ponto] of Object.entries(ferramentas.noChao())) add(ponto, 1.1, `Pegar: ${FERRAMENTAS[id]}`, { acao: () => pegarDoChao(id) });
   for (const [id, lugar] of Object.entries(FERRAMENTAS_LUGAR)) {
+    if (ferramentas.noChao()[id]) continue; // não está na prateleira
     const naMao = ferramentas.naMao() === id;
     add(lugar, 1.1, naMao ? `Devolver: ${FERRAMENTAS[id]}` : `Pegar: ${FERRAMENTAS[id]}`, { acao: () => pegarFerramenta(id) });
   }
@@ -870,6 +904,7 @@ addEventListener('keydown', (e) => {
   if (ui.tecla(e.code)) { e.preventDefault(); return; }
   if (ui.ocupado() && !perguntaAberta) return;
   if (e.code === 'KeyE') { acaoInicio(); return; }
+  if (e.code === 'KeyQ') { if (!ui.ocupado()) largarFerramenta(); return; }
   const m = /^Digit([1-8])$/.exec(e.code);
   if (m) usarItem(Number(m[1]) - 1);
 });
@@ -882,6 +917,7 @@ ui.onItem((i) => { if (modo === 'jogando' && !pausado && !(ui.ocupado() && !perg
 if (controlesToque) {
   controlesToque.mostrar(false);
   controlesToque.onAcao(acaoInicio, acaoFim);
+  controlesToque.onLargar(() => { if (modo === 'jogando' && !pausado && !ui.ocupado()) largarFerramenta(); });
   controlesToque.onPausa(() => {
     if (modo !== 'jogando') return;
     pausado = true;
@@ -1167,7 +1203,7 @@ if (params.has('minuto')) {
 function salvarAgora(hora) {
   salvarNoite(armazenamento, {
     hora, relatorio: noite.relatorio(), itens: inventario.itens(), votos: [...votos], favores: favores.snapshot(),
-    ferramenta: ferramentas.naMao(), cabineAberta, paginas: [...paginasLidas], stats: { ...stats },
+    ferramenta: ferramentas.snapshot(), cabineAberta, paginas: [...paginasLidas], stats: { ...stats },
     visitantes: visitantes.filter((v) => v.estado !== 'feito').map((v) => ({ id: v.v.id, estado: v.estado === 'falando' ? 'esperando' : v.estado })),
   });
 }
@@ -1249,7 +1285,7 @@ window.__jogo = {
     tarefas: noite.tarefas().map((x) => `${x.id}:${x.feita ? 1 : 0}`), segurando, correndo, folego: folego.frac(),
   }),
   definirAoQuadro: (fn) => { aoQuadro = fn; }, ACELERAR,
-  comecar, terminarNoite, abrirPergunta, pegarFerramenta, acaoInicio, acaoFim, lerPagina,
+  largarFerramenta, comecar, terminarNoite, abrirPergunta, pegarFerramenta, acaoInicio, acaoFim, lerPagina,
   favores, comecarPerseguicao, vozesCacada: VOZES_CACADA, stats, suspeita, salvarAgora, comecarSusto, entrarEsconderijo, sairEsconderijo, perseg: () => perseg, escondido: () => escondido?.id ?? null,
   prenderAr: (v) => { prendendoAr = v; },
   correr: (v) => { shift = v; },

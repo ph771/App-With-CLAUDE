@@ -34,3 +34,30 @@ test('snapshot e restaurar', () => {
   f.pegar('sabonete'); f.restaurar(s);
   assert.equal(f.naMao(), 'lampada');
 });
+
+test('largar (Q) deixa a ferramenta no chão e esvazia a mão', () => {
+  const f = createFerramentas(); f.pegar('esfregao');
+  assert.equal(f.largar({ x: 3, z: -2 }), 'esfregao');
+  assert.equal(f.naMao(), null);
+  assert.deepEqual(f.noChao(), { esfregao: { x: 3, z: -2 } });
+  assert.equal(f.multVelocidade(), 1);
+  assert.ok(!f.naPrateleira().includes('esfregao'));
+});
+test('largar de mão vazia não faz nada', () => {
+  const f = createFerramentas();
+  assert.equal(f.largar({ x: 0, z: 0 }), null);
+  assert.deepEqual(f.noChao(), {});
+});
+test('pegar do chão segurando outra: troca (a da mão fica no chão)', () => {
+  const f = createFerramentas(); f.pegar('esfregao'); f.largar({ x: 3, z: -2 }); f.pegar('rolos');
+  assert.deepEqual(f.pegarDoChao('esfregao'), { largada: 'rolos' });
+  assert.equal(f.naMao(), 'esfregao');
+  assert.deepEqual(f.noChao(), { rolos: { x: 3, z: -2 } });
+});
+test('salvar e carregar guarda o que está no chão (e aceita o formato antigo)', () => {
+  const f = createFerramentas(); f.pegar('esfregao'); f.largar({ x: 3, z: -2 }); f.pegar('rolos');
+  const g = createFerramentas(); g.restaurar(f.snapshot());
+  assert.equal(g.naMao(), 'rolos'); assert.deepEqual(g.noChao(), { esfregao: { x: 3, z: -2 } });
+  const h = createFerramentas(); h.restaurar('lampada');
+  assert.equal(h.naMao(), 'lampada'); assert.deepEqual(h.noChao(), {});
+});

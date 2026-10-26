@@ -1,0 +1,11 @@
+Modelos dos itens (todos com licença livre CC0 — uso permitido sem crédito obrigatório):
+
+item_balde.json      — "bucket", Survival Kit, Kenney (www.kenney.nl) — CC0
+item_caneca.json     — "mug", Food Kit, Kenney (www.kenney.nl) — CC0
+item_cafe.json       — "bag", Food Kit, Kenney (www.kenney.nl) — CC0
+item_leite.json      — "can-small", Food Kit, Kenney (www.kenney.nl) — CC0
+item_sabonete.json   — "bottle-oil", Food Kit, Kenney (www.kenney.nl) — CC0
+item_desentupidor.json — "Plunger", Poly Haven (polyhaven.com/a/plunger) — CC0
+
+Convertidos com game/tools/converter-modelo.py (tudo embutido, texturas reduzidas a 256 px).
+Os demais itens (esfregão, rolos de papel, escada com lâmpada, celular, peruca) são feitos no próprio código.

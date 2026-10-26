@@ -80,7 +80,9 @@ scene.add(camera);
 // Móveis prontos (Kenney, CC0). Se algum não carregar, o prédio usa caixas simples.
 const MODELOS = ['toilet', 'bathroomSink', 'trashcan', 'chairCushion', 'chairDesk', 'desk', 'computerScreen', 'computerKeyboard',
   'table', 'chair', 'kitchenCabinet', 'kitchenCoffeeMachine', 'kitchenFridge', 'kitchenMicrowave', 'pottedPlant', 'plantSmall1',
-  'bench', 'loungeSofa', 'cardboardBoxClosed', 'cardboardBoxOpen', 'coatRackStanding', 'sideTable'];
+  'bench', 'loungeSofa', 'cardboardBoxClosed', 'cardboardBoxOpen', 'coatRackStanding', 'sideTable',
+  // Itens (Kenney Survival/Food Kit e Poly Haven, CC0): ver assets/modelos/CREDITOS-itens.txt.
+  'item_balde', 'item_desentupidor', 'item_sabonete', 'item_cafe', 'item_caneca', 'item_leite'];
 await carregarModelos(MODELOS);
 const mundo = criarPredio(scene, { instanciar });
 // ?modelos=1: vitrine com todos os modelos virados para +z (para conferir a frente de cada um).
@@ -1284,7 +1286,7 @@ window.__jogo = {
     relatorio: noite.relatorio(), naMao: ferramentas.naMao(), votos: votos.size, paginas: paginasLidas.size,
     tarefas: noite.tarefas().map((x) => `${x.id}:${x.feita ? 1 : 0}`), segurando, correndo, folego: folego.frac(),
   }),
-  definirAoQuadro: (fn) => { aoQuadro = fn; }, ACELERAR,
+  definirAoQuadro: (fn) => { aoQuadro = fn; }, ACELERAR, cena: scene,
   largarFerramenta, comecar, terminarNoite, abrirPergunta, pegarFerramenta, acaoInicio, acaoFim, lerPagina,
   favores, comecarPerseguicao, vozesCacada: VOZES_CACADA, stats, suspeita, salvarAgora, comecarSusto, entrarEsconderijo, sairEsconderijo, perseg: () => perseg, escondido: () => escondido?.id ?? null,
   prenderAr: (v) => { prendendoAr = v; },

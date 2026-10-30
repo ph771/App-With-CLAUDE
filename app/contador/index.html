@@ -49,15 +49,14 @@ h1 span { color: var(--vinho) }
 .vazio strong { font: 700 1.3rem var(--numero); letter-spacing: .03em }
 
 .fontes { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px }
-button, .botao {
+button {
   font: 700 1rem var(--texto); color: var(--fg); background: var(--painel);
   border: 1.5px solid var(--linha); border-radius: 8px; padding: 10px 14px; cursor: pointer;
   display: inline-flex; align-items: center; gap: 6px; min-height: 44px;
 }
-button:hover, .botao:hover { border-color: var(--vinho) }
-button:focus-visible, .botao:focus-within { outline: 3px solid var(--vinho); outline-offset: 2px }
+button:hover { border-color: var(--vinho) }
+button:focus-visible { outline: 3px solid var(--vinho); outline-offset: 2px }
 button.ativo { background: var(--vinho); border-color: var(--vinho); color: var(--bg) }
-.botao input { position: absolute; width: 1px; height: 1px; opacity: 0 }
 .aviso { margin: 8px 0 0; font-size: .9rem; color: var(--errada) }
 .dica { margin: 8px 0 0; font-size: .88rem; color: var(--suave) }
 
@@ -96,7 +95,7 @@ button.perigo { color: var(--errada) }
 
 <header>
   <h1>Contador de <span>Cangas</span></h1>
-  <div class="estado" id="estado">Escolha a <b>câmera</b> ou um <b>vídeo da galeria</b> para começar.</div>
+  <div class="estado" id="estado">Toque em <b>Ligar câmera</b> para começar a contar.</div>
 </header>
 
 <div class="grade">
@@ -110,9 +109,8 @@ button.perigo { color: var(--errada) }
       </div>
     </div>
     <div class="fontes">
-      <button id="btnCamera" type="button">📷 Câmera ao vivo</button>
+      <button id="btnCamera" type="button">📷 Ligar câmera</button>
       <button id="btnTrocar" type="button" hidden>🔄 Trocar câmera</button>
-      <label class="botao" for="arquivo">🎞️ Vídeo da galeria<input id="arquivo" type="file" accept="video/*"></label>
       <button id="btnAreas" type="button">✏️ Ajustar áreas</button>
       <button id="btnPadrao" type="button" hidden>↩️ Áreas padrão</button>
     </div>
@@ -246,18 +244,23 @@ button.perigo { color: var(--errada) }
   function estado(html) { $('estado').innerHTML = html; }
 
   // ---------- Fontes de imagem ----------
-  let fluxo = null, frente = true, rodando = false, ultimaAmostra = -Infinity, origemTempo = 'relogio';
+  let fluxo = null, frente = ler('cangas.frente', true), rodando = false, ultimaAmostra = -Infinity;
   let travaTela = null;
 
   async function manterTelaAcesa() {
     try { if ('wakeLock' in navigator && !travaTela) { travaTela = await navigator.wakeLock.request('screen'); travaTela.onrelease = () => (travaTela = null); } } catch {}
   }
-  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && rodando) manterTelaAcesa(); });
+  // Se o celular apagar a tela ou trocar de app, a câmera para; ao voltar, liga de novo sozinha.
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible' || !rodando) return;
+    const viva = fluxo && fluxo.getVideoTracks().some((t) => t.readyState === 'live');
+    if (viva) manterTelaAcesa(); else ligarCamera();
+  });
 
   function pararTudo() {
     rodando = false;
     if (fluxo) { fluxo.getTracks().forEach((t) => t.stop()); fluxo = null; }
-    video.pause(); video.removeAttribute('src'); video.srcObject = null;
+    video.pause(); video.srcObject = null;
   }
 
   async function ligarCamera() {
@@ -268,30 +271,14 @@ button.perigo { color: var(--errada) }
         video: { facingMode: frente ? 'user' : 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false,
       });
     } catch (e) {
-      aviso('A câmera não abriu aqui. Se você está vendo esta página dentro do Claude, a câmera é bloqueada: use "Vídeo da galeria" para testar, ou abra o app pelo endereço próprio dele.');
+      aviso('A câmera não abriu. Toque em "Ligar câmera" e escolha "Permitir" quando o navegador perguntar. Se você negou antes, libere a câmera nas configurações do site (cadeado ao lado do endereço).');
       estado('Câmera indisponível.');
       return;
     }
     video.srcObject = fluxo; await video.play().catch(() => {});
-    origemTempo = 'relogio'; $('btnTrocar').hidden = false;
+    $('btnTrocar').hidden = false; $('btnCamera').textContent = '📷 Religar câmera';
     comecar(`Contando pela câmera ${frente ? 'da frente' : 'de trás'}.`);
     manterTelaAcesa();
-  }
-
-  function abrirVideo(arquivo) {
-    liberarSom(); aviso('');
-    pararTudo();
-    video.src = URL.createObjectURL(arquivo);
-    video.onloadeddata = () => {
-      origemTempo = 'video'; $('btnTrocar').hidden = true;
-      comecar(`Analisando o vídeo <b>${arquivo.name.replace(/[<>&]/g, '')}</b>…`);
-      video.play().catch(() => {});
-    };
-    video.onended = () => {
-      rodando = false;
-      const t = totais();
-      estado(`Vídeo terminado. Total <b>${t.total}</b> · certas <b>${t.certas}</b> · erradas <b>${t.erradas}</b>.`);
-    };
   }
 
   function comecar(texto) {
@@ -304,13 +291,13 @@ button.perigo { color: var(--errada) }
 
   function agendar() {
     if (!rodando) return;
-    if (video.requestVideoFrameCallback) video.requestVideoFrameCallback((agora, meta) => passo(meta.mediaTime * 1000));
-    else requestAnimationFrame(() => passo(video.currentTime * 1000));
+    if (video.requestVideoFrameCallback) video.requestVideoFrameCallback(passo);
+    else requestAnimationFrame(passo);
   }
 
-  function passo(tempoVideo) {
+  function passo() {
     if (!rodando) return;
-    const t = origemTempo === 'video' ? tempoVideo : performance.now();
+    const t = performance.now();
     if (t - ultimaAmostra >= AMOSTRA_MS - 5 && video.videoWidth) {
       ultimaAmostra = t;
       const w = LARGURA, h = Math.round((LARGURA * video.videoHeight) / video.videoWidth);
@@ -329,8 +316,7 @@ button.perigo { color: var(--errada) }
   }
 
   $('btnCamera').onclick = ligarCamera;
-  $('btnTrocar').onclick = () => { frente = !frente; ligarCamera(); };
-  $('arquivo').onchange = (e) => { const f = e.target.files[0]; if (f) abrirVideo(f); e.target.value = ''; };
+  $('btnTrocar').onclick = () => { frente = !frente; gravar('cangas.frente', frente); ligarCamera(); };
 
   // ---------- Áreas: desenhar e ajustar ----------
   const CORES = { suporte: '--certa', saida: '--errada', ignorar: '--ignorar' };
@@ -397,5 +383,9 @@ button.perigo { color: var(--errada) }
   $('btnPadrao').onclick = () => { areas = structuredClone(PADRAO.areas); gravar('cangas.areas', areas); contador = criarContador({ areas }); };
 
   mostrar();
+  // Se a câmera já foi permitida antes, liga sozinha ao abrir o app.
+  try {
+    navigator.permissions.query({ name: 'camera' }).then((p) => { if (p.state === 'granted') ligarCamera(); }, () => {});
+  } catch {}
 })();
 </script>

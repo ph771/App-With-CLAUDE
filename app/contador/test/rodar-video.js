@@ -22,7 +22,7 @@ function rodarVideo(caminho, { detalhes = false } = {}) {
         for (const e of contador.processar(img, LARGURA, ALTURA, t)) eventos.push(e);
         if (detalhes) {
           const l = contador.leitura;
-          console.log(`${(t / 1000).toFixed(1)}s suporte=${l.movSuporte.toFixed(2)} total=${l.movTotal.toFixed(2)} anel=${l.difAnel.toFixed(2)} sem=${l.semelhanca.toFixed(2)}`);
+          console.log(`${(t / 1000).toFixed(1)}s suporte=${l.movSuporte.toFixed(2)} total=${l.movTotal.toFixed(2)} anel=${l.difAnel.toFixed(2)} dif=${(l.difSuporte||0).toFixed(3)} sem=${l.semelhanca.toFixed(2)}`);
         }
       }
     });

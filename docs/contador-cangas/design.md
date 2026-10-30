@@ -12,6 +12,12 @@
 > enquanto a peça pendurada fica só dentro do suporte. A contagem só acontece com o suporte
 > mudado, parado por 1,5 s e com a faixa livre. Se algo ficar parado na frente, o app espera
 > (e avisa depois de 20 s), sem nunca transformar isso em referência.
+>
+> **Atualização (versão 8):** cangas iguais empilhadas mudam pouco o "desenho" do suporte;
+> agora também conta quando ≥5% dos pixels do suporte mudam (dobra, borda, volume). Uma mão
+> que passa e sai deixa 0%. Se suporte e faixa ficarem parados 5 s com a faixa diferente, o
+> app aprende a cena sem contar (não trava mais). Imagens lisas (camiseta de uma cor) não
+> geram contagens repetidas. O ajuste mostra uma linha de diagnóstico.
 
 ## O que é
 

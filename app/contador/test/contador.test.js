@@ -122,6 +122,48 @@ test('peça pendurada com a mão ainda no suporte só conta depois que a mão sa
   assert.strictEqual(certas, 1);
 });
 
+// Estampa "lisa" (formas grandes), como várias cangas iguais empilhadas.
+function estampa(desceY, bordaY) {
+  const img = fundo();
+  const y0 = Math.round(SUP.y * H), y1 = Math.round((SUP.y + SUP.h) * H), x0 = Math.round(SUP.x * W), x1 = Math.round((SUP.x + SUP.w) * W);
+  for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
+    const v = y < bordaY ? 128 + 70 * Math.sin(x / 7) * Math.cos((y - desceY) / 6) : 90;
+    img[y * W + x] = Math.max(0, Math.min(255, Math.round(v)));
+  }
+  return img;
+}
+
+test('canga igual pendurada em cima de outra igual conta 1', () => {
+  const y1 = Math.round((SUP.y + SUP.h) * H);
+  const pilha1 = estampa(0, y1 - 3), pilha2 = estampa(2, y1 - 1); // dobra 2 px abaixo, borda mais baixa
+  const { semelhanca } = (() => { // confirma que o "desenho" quase não muda (o caso difícil)
+    const r = [], q = [];
+    for (let y = Math.round(SUP.y * H); y < y1; y++) for (let x = Math.round(SUP.x * W); x < Math.round((SUP.x + SUP.w) * W); x++) { r.push(pilha1[y * W + x]); q.push(pilha2[y * W + x]); }
+    const m = (v) => v.reduce((a, b) => a + b) / v.length, ma = m(r), mb = m(q);
+    let ab = 0, aa = 0, bb = 0; r.forEach((v, i) => { ab += (v - ma) * (q[i] - mb); aa += (v - ma) ** 2; bb += (q[i] - mb) ** 2; });
+    return { semelhanca: ab / Math.sqrt(aa * bb) };
+  })();
+  assert.ok(semelhanca > 0.6, `caso de teste deveria ser parecido (semelhança ${semelhanca.toFixed(2)})`);
+  const maoPassando = pintar(pilha1, BRACO, 25);
+  const quadros = [...repetir(pilha1, 25), maoPassando, maoPassando, ...repetir(pilha2, 25)];
+  assert.strictEqual(rodar(quadros), 1);
+});
+
+test('mão passando sobre pilha de cangas iguais, sem pendurar nada, não conta', () => {
+  const y1 = Math.round((SUP.y + SUP.h) * H);
+  const pilha = estampa(0, y1 - 3), mao = pintar(pilha, BRACO, 25);
+  const quadros = [...repetir(pilha, 25), mao, mao, mao, ...repetir(pilha, 25)];
+  assert.strictEqual(vezesQueContou(quadros), 0);
+});
+
+test('não trava se aprendeu a faixa com alguém parado nela', () => {
+  // No começo alguém fica parado na faixa (sem cobrir o suporte); depois sai e pendura uma peça.
+  const base = fundo(), aoLado = pintar(base, { x: 0.6, y: 0.5, w: 0.1, h: 0.5 }, 30);
+  const peca = listras(base, SUP), maoNaPeca = pintar(peca, BRACO, 25);
+  const quadros = [...repetir(aoLado, 30), ...repetir(base, 70), maoNaPeca, maoNaPeca, ...repetir(peca, 30)];
+  assert.strictEqual(rodar(quadros), 1);
+});
+
 test('movimento fora do suporte (cortadeira, peça jogada) não conta', () => {
   const base = fundo(), maq = pintar(base, { x: 0.0, y: 0.0, w: 0.3, h: 1 }, 250);
   const quadros = [...repetir(base, 10)];

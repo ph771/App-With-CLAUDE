@@ -1,5 +1,12 @@
 # Contador de Cangas por Câmera — Design
 
+> **Atualização (versão 5):** a pedido do operador, o app passou a contar **só as peças
+> certas**, penduradas no suporte. A contagem de erradas, a área de saída e a área da
+> cortadeira foram removidas para evitar contagens falsas. Antes de contar, um **ajuste**
+> guiado pede para desenhar o retângulo do suporte na imagem e testar com uma peça (o
+> teste não entra na contagem). A contagem só começa no botão "Começar a contar", e pausa
+> sozinha se o celular se mexer. O texto abaixo é o design original.
+
 ## O que é
 
 Um app que roda no navegador do celular, com a câmera parada filmando o posto de

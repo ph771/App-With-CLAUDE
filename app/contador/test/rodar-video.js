@@ -1,4 +1,4 @@
-// Roda a lógica de contagem num vídeo gravado e mostra o que ela contou.
+// Roda a lógica de contagem num vídeo gravado e mostra quantas certas ela contou.
 // Uso: node test/rodar-video.js caminho/do/video.mp4 [--detalhes]
 const { spawn } = require('child_process');
 const { criarContador } = require('../counter.js');
@@ -22,7 +22,7 @@ function rodarVideo(caminho, { detalhes = false } = {}) {
         for (const e of contador.processar(img, LARGURA, ALTURA, t)) eventos.push(e);
         if (detalhes) {
           const l = contador.leitura;
-          console.log(`${(t / 1000).toFixed(1)}s suporte=${l.movSuporte.toFixed(2)} saida=${l.movSaida.toFixed(2)} sem=${l.semelhanca.toFixed(2)}`);
+          console.log(`${(t / 1000).toFixed(1)}s suporte=${l.movSuporte.toFixed(2)} total=${l.movTotal.toFixed(2)} sem=${l.semelhanca.toFixed(2)}`);
         }
       }
     });
@@ -32,13 +32,12 @@ function rodarVideo(caminho, { detalhes = false } = {}) {
 }
 
 function resumir(eventos) {
-  let certas = 0, erradas = 0;
+  let certas = 0;
   for (const e of eventos) {
     if (e.tipo === 'certa') certas++;
     else if (e.tipo === 'certa-desfeita') certas--;
-    else if (e.tipo === 'errada') erradas++;
   }
-  return { certas, erradas, total: certas + erradas };
+  return { certas };
 }
 
 module.exports = { rodarVideo, resumir };

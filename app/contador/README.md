@@ -18,7 +18,7 @@ O app fica hospedado no GitHub Pages do repositório `ph771/Contador-de-tecidos-
 Para atualizar, copie `counter.js` e gere o `index.html` completo:
 
 ```sh
-{ printf '<!doctype html>\n<html lang="pt-BR">\n<head><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"></head>\n<body>\n'
+{ printf '<!doctype html>\n<html lang="pt-BR">\n<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"></head>\n<body>\n'
   cat app/contador/index.html; printf '</body>\n</html>\n'; } > ../contador-de-tecidos-/index.html
 cp app/contador/counter.js ../contador-de-tecidos-/
 ```

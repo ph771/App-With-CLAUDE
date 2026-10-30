@@ -87,6 +87,19 @@ test('cortadeira se mexendo na área ignorada não conta', () => {
   assert.strictEqual(rodar(quadros).total, 0);
 });
 
+test('celular sendo mexido e colocado em outra posição não conta', () => {
+  // Fundo deslizando = câmera se mexendo; depois para numa posição nova.
+  const deslocado = (dx) => {
+    const img = new Uint8Array(W * H);
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) img[y * W + x] = 80 + (((x + dx) * 7 + y * 13) % 60) + (((x + dx) >> 3) % 2) * 60;
+    return img;
+  };
+  const quadros = [...repetir(deslocado(0), 15)];
+  for (let i = 1; i <= 20; i++) quadros.push(deslocado(i * 3));
+  quadros.push(...repetir(deslocado(60), 40));
+  assert.deepStrictEqual(rodar(quadros), { certas: 0, erradas: 0, total: 0 });
+});
+
 for (const video of (process.env.VIDEOS || '').split(',').filter(Boolean)) {
   test(`vídeo real ${video}: 1 certa e 1 errada`, async () => {
     assert.deepStrictEqual(resumir(await rodarVideo(video)), { certas: 1, erradas: 1, total: 2 });

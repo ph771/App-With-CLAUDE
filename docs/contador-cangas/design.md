@@ -6,6 +6,12 @@
 > guiado pede para desenhar o retângulo do suporte na imagem e testar com uma peça (o
 > teste não entra na contagem). A contagem só começa no botão "Começar a contar", e pausa
 > sozinha se o celular se mexer. O texto abaixo é o design original.
+>
+> **Atualização (versão 6):** mão, máquina ou pessoa na frente do suporte não contam. O app
+> vigia uma faixa em cima e dos lados do suporte; essas coisas sempre atravessam a faixa,
+> enquanto a peça pendurada fica só dentro do suporte. A contagem só acontece com o suporte
+> mudado, parado por 1,5 s e com a faixa livre. Se algo ficar parado na frente, o app espera
+> (e avisa depois de 20 s), sem nunca transformar isso em referência.
 
 ## O que é
 

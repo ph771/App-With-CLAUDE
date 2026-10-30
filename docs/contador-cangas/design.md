@@ -18,6 +18,11 @@
 > que passa e sai deixa 0%. Se suporte e faixa ficarem parados 5 s com a faixa diferente, o
 > app aprende a cena sem contar (não trava mais). Imagens lisas (camiseta de uma cor) não
 > geram contagens repetidas. O ajuste mostra uma linha de diagnóstico.
+>
+> **Atualização (versão 9):** contra a luz, a câmera reajusta brilho e contraste sozinha.
+> Todas as comparações agora compensam brilho e contraste antes de medir mudança (com limites,
+> para uma estampa trocada por área lisa não parecer "só luz"). Ao marcar o suporte, o app
+> tenta travar exposição e balanço de branco da câmera (onde o celular deixa).
 
 ## O que é
 

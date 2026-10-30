@@ -164,6 +164,40 @@ test('não trava se aprendeu a faixa com alguém parado nela', () => {
   assert.strictEqual(rodar(quadros), 1);
 });
 
+// Contra a luz: a câmera reajusta brilho e contraste sozinha (de forma não uniforme).
+function exposicao(img, ganho, gama) {
+  const out = new Uint8Array(img.length);
+  for (let i = 0; i < img.length; i++) out[i] = Math.max(0, Math.min(255, Math.round(255 * Math.pow(img[i] / 255, gama) * ganho)));
+  return out;
+}
+
+test('contra a luz: câmera reajustando brilho e contraste sem nada mudar não conta', () => {
+  const base = listras(fundo(), SUP), quadros = [];
+  for (let i = 0; i < 300; i++) {
+    const k = Math.sin(i / 6); // reajuste rápido, como quando alguém passa na frente da luz
+    quadros.push(exposicao(base, 1 + 0.35 * k, 1 + 0.2 * Math.cos(i / 9)));
+  }
+  assert.strictEqual(vezesQueContou(quadros), 0);
+});
+
+test('contra a luz: pessoa passando perto (fora do suporte) escurecendo a imagem não conta', () => {
+  const base = listras(fundo(), SUP), quadros = [...repetir(base, 25)];
+  for (let i = 0; i < 30; i++) {
+    const pessoa = pintar(base, { x: 0.25 + i * 0.01, y: 0.1, w: 0.3, h: 0.9 }, 20); // passa no meio da imagem
+    quadros.push(exposicao(pessoa, 1.45, 0.85)); // a câmera clareia tudo por causa da pessoa escura
+  }
+  quadros.push(...repetir(base, 30));
+  assert.strictEqual(vezesQueContou(quadros), 0);
+});
+
+test('contra a luz: peça pendurada enquanto a câmera muda a luz conta 1', () => {
+  const y1 = Math.round((SUP.y + SUP.h) * H);
+  const antes = estampa(0, y1 - 3), depois = estampa(2, y1 - 1), mao = pintar(antes, BRACO, 25);
+  const quadros = [...repetir(antes, 25), exposicao(mao, 1.4, 0.9), exposicao(mao, 1.4, 0.9)];
+  quadros.push(...repetir(exposicao(depois, 1.3, 0.9), 30)); // depois a imagem fica mais clara
+  assert.strictEqual(rodar(quadros), 1);
+});
+
 test('movimento fora do suporte (cortadeira, peça jogada) não conta', () => {
   const base = fundo(), maq = pintar(base, { x: 0.0, y: 0.0, w: 0.3, h: 1 }, 250);
   const quadros = [...repetir(base, 10)];

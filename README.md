@@ -70,4 +70,4 @@ npm test          # testes (os de ponta a ponta usam Playwright com câmera fals
 npm run servidor  # abre o app em http://localhost:8080
 ```
 
-Ao mudar a lista de arquivos do app, aumente a versão em `sw.js` (`teleprompter-v1`).
+Ao mudar a lista de arquivos do app, aumente a versão em `sw.js` (`teleprompter-v2`).

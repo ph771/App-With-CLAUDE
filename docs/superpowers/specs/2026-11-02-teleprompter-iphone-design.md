@@ -92,3 +92,14 @@ mostra só a pessoa**, sem nada por cima. Ele não programa e não tem Mac.
 
 Detalhes de código, nomes internos, organização dos arquivos e textos de erro, desde
 que sigam o visual e o comportamento da tela de exemplo.
+
+## Mudança: mais espaço para o texto (2026-11-02)
+
+Pedido do dono: "o texto pode tomar mais espaço na tela". Roteiros continuam chegando
+pelo WhatsApp (copiar e colar); nada muda nisso.
+
+- Nova opção **Espaço do texto na tela: Pequeno / Médio / Grande**. Padrão: **Grande**.
+- Em pé: 34% / 48% / 62% da altura da tela. Deitado: 50% / 62% / 74%.
+- A faixa nunca cobre os botões (gravar, velocidade, rolar, voltar) — conferido por teste
+  no iPhone SE (o menor), num iPhone comum e nos dois deitados.
+- Quem já usava o app ganha o espaço Grande; os outros ajustes ficam como estavam.

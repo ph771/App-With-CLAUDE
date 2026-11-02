@@ -118,12 +118,52 @@ test('texto e ajustes voltam ao reabrir o app', async () => {
   await pagina.click('#fmt-horizontal');
   await pagina.click('#pos-topo');
   await pagina.$eval('#vel', (el) => { el.value = '8'; el.dispatchEvent(new Event('input', { bubbles: true })); });
+  await pagina.click('#espaco-medio');
   await pagina.reload();
   assert.equal(await pagina.inputValue('#roteiro'), 'Meu roteiro salvo');
   assert.equal(await pagina.getAttribute('#fmt-horizontal', 'aria-pressed'), 'true');
   assert.equal(await pagina.getAttribute('#pos-topo', 'aria-pressed'), 'true');
   assert.equal(await pagina.inputValue('#vel'), '8');
+  assert.equal(await pagina.getAttribute('#espaco-medio', 'aria-pressed'), 'true');
   await contexto.close();
+});
+
+test('o texto ocupa mais espaço por padrão e nunca cobre os botões', async () => {
+  const telas = [
+    { largura: 375, altura: 667, formato: 'vertical' },   // iPhone SE, o menor
+    { largura: 390, altura: 844, formato: 'vertical' },
+    { largura: 667, altura: 375, formato: 'horizontal' },
+    { largura: 844, altura: 390, formato: 'horizontal' },
+  ];
+  for (const t of telas) {
+    const { pagina, contexto } = await novaPagina({ largura: t.largura, altura: t.altura });
+    if (t.formato === 'horizontal') await pagina.click('#fmt-horizontal');
+    assert.equal(await pagina.getAttribute('#espaco-grande', 'aria-pressed'), 'true', 'o padrão deve ser o espaço grande');
+    const alturas = {};
+    for (const espaco of ['pequeno', 'medio', 'grande']) {
+      for (const pos of ['meio', 'topo']) {
+        if (await pagina.isVisible('#tela-camera')) await pagina.click('#voltar');
+        await pagina.click('#espaco-' + espaco);
+        await pagina.click('#pos-' + pos);
+        await pagina.click('#abrir');
+        await pagina.waitForSelector('#gravar:not([disabled])');
+        await pagina.waitForTimeout(450); // a faixa desliza até o lugar
+        const m = await pagina.evaluate(() => {
+          const r = (s) => document.querySelector(s).getBoundingClientRect();
+          return { faixa: r('#prompter'), gravar: r('#gravar'), velocidade: r('.speed'), pausar: r('#pausar'), topo: r('#voltar'), tela: r('#celular') };
+        });
+        const cobre = (a, b) => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+        const onde = `${t.largura}x${t.altura} ${espaco} ${pos}`;
+        for (const botao of ['gravar', 'velocidade', 'pausar', 'topo']) {
+          assert.ok(!cobre(m.faixa, m[botao]), `${onde}: o texto cobre o botão ${botao}`);
+        }
+        alturas[espaco] = m.faixa.height / m.tela.height;
+      }
+    }
+    assert.ok(alturas.grande > alturas.medio && alturas.medio > alturas.pequeno, `${t.largura}x${t.altura}: tamanhos fora de ordem`);
+    assert.ok(alturas.grande >= 0.55, `${t.largura}x${t.altura}: espaço grande pequeno demais (${(alturas.grande * 100).toFixed(0)}%)`);
+    await contexto.close();
+  }
 });
 
 test('vídeo horizontal com o celular em pé pede para girar', async () => {

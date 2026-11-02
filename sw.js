@@ -1,7 +1,7 @@
 // Guarda os arquivos do app no iPhone para ele abrir mesmo sem internet.
 // Com internet, sempre busca a versão mais nova primeiro.
 // Ao mudar a lista de arquivos, aumente o número da versão.
-const CACHE = 'teleprompter-v1';
+const CACHE = 'teleprompter-v2';
 const ARQUIVOS = [
   './',
   'index.html',

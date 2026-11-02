@@ -132,6 +132,7 @@ textarea::placeholder { color: var(--muted); font-weight: 400; }
 output { color: var(--muted); font-weight: 500; font-variant-numeric: tabular-nums; }
 input[type="range"] { width: 100%; accent-color: var(--cue); margin: 0; height: 28px; }
 .seg { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 4px; background: var(--field); border: 1px solid var(--line); border-radius: 14px; }
+.seg.tres { grid-template-columns: repeat(3, 1fr); }
 .seg button {
   display: flex; align-items: center; justify-content: center; gap: 8px;
   border: 0; border-radius: 10px; padding: 10px 8px; background: transparent;
@@ -154,6 +155,10 @@ input[type="range"] { width: 100%; accent-color: var(--cue); margin: 0; height: 
 }
 
 /* ---------- tela 2: câmera ---------- */
+/* Espaço do texto: quanto da tela a faixa ocupa (em pé e deitado) */
+.phone { --faixa-h: 62%; --faixa-meio: 14%; --faixa-h-deitado: 74%; --faixa-meio-deitado: 16%; }
+.phone.espaco-medio { --faixa-h: 48%; --faixa-meio: 22%; --faixa-h-deitado: 62%; --faixa-meio-deitado: 20%; }
+.phone.espaco-pequeno { --faixa-h: 34%; --faixa-meio: 31%; --faixa-h-deitado: 50%; --faixa-meio-deitado: 25%; }
 .camera { background: #000; }
 .previa {
   position: absolute; inset: 0; width: 100%; height: 100%;
@@ -191,12 +196,12 @@ input[type="range"] { width: 100%; accent-color: var(--cue); margin: 0; height: 
 }
 
 .prompter {
-  position: absolute; z-index: 5; left: calc(12px + var(--esq)); right: calc(12px + var(--dir)); height: 34%;
+  position: absolute; z-index: 5; left: calc(12px + var(--esq)); right: calc(12px + var(--dir)); height: var(--faixa-h);
   border-radius: 22px; background: rgba(8, 9, 12, .62);
-  overflow: hidden; transition: top .4s ease, left .4s ease, right .4s ease;
+  overflow: hidden; transition: top .4s ease, left .4s ease, right .4s ease, height .4s ease;
   touch-action: none; -webkit-user-select: none; user-select: none; cursor: grab;
 }
-.prompter.pos-meio { top: 31%; }
+.prompter.pos-meio { top: var(--faixa-meio); }
 .prompter.pos-topo { top: calc(60px + var(--topo)); }
 .scroller {
   position: absolute; inset: 0; padding: 0 20px 0 32px;
@@ -273,8 +278,8 @@ input[type="range"] { width: 100%; accent-color: var(--cue); margin: 0; height: 
 @keyframes desgira { 0%, 20% { transform: rotate(-90deg); } 55%, 100% { transform: rotate(0); } }
 
 /* câmera deitada: controles numa coluna do lado oposto à câmera */
-.deitado .prompter { height: 50%; }
-.deitado .prompter.pos-meio { top: 25%; left: calc(16% + var(--esq)); right: calc(166px + var(--dir)); }
+.deitado .prompter { height: var(--faixa-h-deitado); }
+.deitado .prompter.pos-meio { top: var(--faixa-meio-deitado); left: calc(16% + var(--esq)); right: calc(166px + var(--dir)); }
 .deitado .prompter.pos-topo { top: calc(58px + var(--topo)); left: calc(12px + var(--esq)); right: 46%; }
 .deitado .top-bar { right: 150px; }
 .deitado .controls {

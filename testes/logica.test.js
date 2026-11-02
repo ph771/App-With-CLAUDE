@@ -142,14 +142,22 @@ test('carregarPreferencias devolve os padrões quando não há nada salvo', () =
   assert.equal(PADROES.posicao, 'meio');
   assert.equal(PADROES.velocidade, 4);
   assert.equal(PADROES.tamanho, 32);
+  assert.equal(PADROES.espaco, 'grande');
   assert.ok(PADROES.texto.length > 0);
 });
 
 test('salvarPreferencias e carregarPreferencias guardam o texto e os ajustes', () => {
   const a = armazenamentoFalso();
-  const prefs = { texto: 'Olá, mundo', formato: 'horizontal', posicao: 'topo', velocidade: 7, tamanho: 40 };
+  const prefs = { texto: 'Olá, mundo', formato: 'horizontal', posicao: 'topo', velocidade: 7, tamanho: 40, espaco: 'pequeno' };
   salvarPreferencias(a, prefs);
   assert.deepEqual(carregarPreferencias(a), prefs);
+});
+
+test('preferências salvas antes de existir o espaço do texto ganham o espaço grande', () => {
+  const a = armazenamentoFalso({
+    'teleprompter:prefs': JSON.stringify({ texto: 'Antigo', formato: 'vertical', posicao: 'meio', velocidade: 5, tamanho: 30 }),
+  });
+  assert.deepEqual(carregarPreferencias(a), { texto: 'Antigo', formato: 'vertical', posicao: 'meio', velocidade: 5, tamanho: 30, espaco: 'grande' });
 });
 
 test('carregarPreferencias guarda texto vazio (a pessoa apagou de propósito)', () => {
@@ -160,7 +168,7 @@ test('carregarPreferencias guarda texto vazio (a pessoa apagou de propósito)', 
 
 test('carregarPreferencias corrige valores fora da faixa', () => {
   const a = armazenamentoFalso({
-    'teleprompter:prefs': JSON.stringify({ texto: 5, formato: 'diagonal', posicao: 'x', velocidade: 99, tamanho: 3 }),
+    'teleprompter:prefs': JSON.stringify({ texto: 5, formato: 'diagonal', posicao: 'x', velocidade: 99, tamanho: 3, espaco: 'enorme' }),
   });
   assert.deepEqual(carregarPreferencias(a), PADROES);
 });

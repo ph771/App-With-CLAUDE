@@ -80,6 +80,12 @@ function aplicarPosicao() {
   requestAnimationFrame(() => prompter.medir());
 }
 
+function aplicarEspaco() {
+  document.querySelectorAll('[data-espaco]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.espaco === prefs.espaco)));
+  ['pequeno', 'medio', 'grande'].forEach((e) => celular.classList.toggle('espaco-' + e, e === prefs.espaco));
+  setTimeout(() => prompter.medir(), 450); // depois que a faixa termina de mudar de tamanho
+}
+
 function aplicarVelocidade() {
   vel.value = String(prefs.velocidade);
   const nome = nomeVelocidade(prefs.velocidade);
@@ -383,6 +389,9 @@ document.querySelectorAll('[data-formato]').forEach((b) => b.addEventListener('c
 document.querySelectorAll('[data-pos]').forEach((b) => b.addEventListener('click', () => {
   prefs.posicao = b.dataset.pos; aplicarPosicao(); guardar();
 }));
+document.querySelectorAll('[data-espaco]').forEach((b) => b.addEventListener('click', () => {
+  prefs.espaco = b.dataset.espaco; aplicarEspaco(); guardar();
+}));
 $('#trocar-pos').addEventListener('click', () => {
   prefs.posicao = prefs.posicao === 'meio' ? 'topo' : 'meio';
   aplicarPosicao(); guardar(); mostrarDica(DICAS_POSICAO[prefs.posicao]);
@@ -435,6 +444,7 @@ window.addEventListener('pagehide', () => { desligarCamera(); });
 roteiro.value = prefs.texto;
 aplicarFormato();
 aplicarPosicao();
+aplicarEspaco();
 aplicarVelocidade();
 aplicarTamanho();
 mostrarDicaInstalar();

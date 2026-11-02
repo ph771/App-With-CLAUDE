@@ -97,7 +97,10 @@ export const PADROES = Object.freeze({
   posicao: 'meio',
   velocidade: 4,
   tamanho: 32,
+  espaco: 'grande', // quanto da tela a faixa do texto ocupa: pequeno | medio | grande
 });
+
+export const ESPACOS = Object.freeze(['pequeno', 'medio', 'grande']);
 
 export const LIMITES = Object.freeze({
   velocidade: [1, 10],
@@ -125,6 +128,7 @@ export function carregarPreferencias(armazenamento) {
     posicao: salvo.posicao === 'meio' || salvo.posicao === 'topo' ? salvo.posicao : PADROES.posicao,
     velocidade: noIntervalo(salvo.velocidade, LIMITES.velocidade) ? salvo.velocidade : PADROES.velocidade,
     tamanho: noIntervalo(salvo.tamanho, LIMITES.tamanho) ? salvo.tamanho : PADROES.tamanho,
+    espaco: ESPACOS.includes(salvo.espaco) ? salvo.espaco : PADROES.espaco,
   };
 }
 

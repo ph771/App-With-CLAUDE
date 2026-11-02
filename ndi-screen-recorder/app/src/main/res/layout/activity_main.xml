@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fitsSystemWindows="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/app_name"
+            android:textAppearance="?attr/textAppearanceHeadlineMedium" />
+
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="14dp">
+
+                <TextView
+                    android:id="@+id/statusTitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textAppearance="?attr/textAppearanceTitleLarge"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/statusDetail"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:textAppearance="?attr/textAppearanceBodyMedium" />
+
+                <TextView
+                    android:id="@+id/ndiLibStatus"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:textAppearance="?attr/textAppearanceBodySmall" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <TextView style="@style/SectionTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/section_ndi" />
+
+        <com.google.android.material.materialswitch.MaterialSwitch
+            android:id="@+id/switchNdi"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/ndi_switch" />
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/ndiNameLayout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="@string/ndi_name_hint">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/ndiName"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="text"
+                android:maxLines="1" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <TextView style="@style/SectionTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/section_record" />
+
+        <com.google.android.material.materialswitch.MaterialSwitch
+            android:id="@+id/switchRecord"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/record_switch" />
+
+        <TextView style="@style/FieldLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/codec_label" />
+
+        <RadioGroup
+            android:id="@+id/codecGroup"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <RadioButton
+                android:id="@+id/radioH264"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="H.264" />
+
+            <RadioButton
+                android:id="@+id/radioH265"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:text="H.265 (HEVC)" />
+        </RadioGroup>
+
+        <TextView
+            android:id="@+id/codecNote"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textAppearance="?attr/textAppearanceBodySmall" />
+
+        <TextView style="@style/SectionTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/section_video" />
+
+        <TextView style="@style/FieldLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/resolution_label" />
+
+        <Spinner
+            android:id="@+id/spinnerResolution"
+            android:layout_width="match_parent"
+            android:layout_height="48dp" />
+
+        <TextView style="@style/FieldLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/fps_label" />
+
+        <Spinner
+            android:id="@+id/spinnerFps"
+            android:layout_width="match_parent"
+            android:layout_height="48dp" />
+
+        <TextView style="@style/FieldLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/bitrate_label" />
+
+        <Spinner
+            android:id="@+id/spinnerBitrate"
+            android:layout_width="match_parent"
+            android:layout_height="48dp" />
+
+        <TextView style="@style/SectionTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/section_audio" />
+
+        <com.google.android.material.materialswitch.MaterialSwitch
+            android:id="@+id/switchInternal"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/internal_audio_switch" />
+
+        <com.google.android.material.materialswitch.MaterialSwitch
+            android:id="@+id/switchMic"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/mic_switch" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="@string/audio_note"
+            android:textAppearance="?attr/textAppearanceBodySmall" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/buttonStart"
+            android:layout_width="match_parent"
+            android:layout_height="64dp"
+            android:layout_marginTop="24dp"
+            android:text="@string/start"
+            android:textSize="18sp" />
+    </LinearLayout>
+</ScrollView>

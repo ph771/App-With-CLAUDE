@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Tela NDI</string>
+    <string name="section_ndi">Transmissão NDI</string>
+    <string name="ndi_switch">Transmitir a tela via NDI</string>
+    <string name="ndi_name_hint">Nome da fonte NDI</string>
+    <string name="section_record">Gravação no celular</string>
+    <string name="record_switch">Gravar vídeo (pasta Filmes/TelaNDI)</string>
+    <string name="codec_label">Codec de vídeo</string>
+    <string name="section_video">Vídeo</string>
+    <string name="resolution_label">Resolução</string>
+    <string name="fps_label">Quadros por segundo</string>
+    <string name="bitrate_label">Qualidade da gravação (bitrate)</string>
+    <string name="section_audio">Áudio</string>
+    <string name="internal_audio_switch">Áudio interno (som dos apps)</string>
+    <string name="mic_switch">Microfone</string>
+    <string name="audio_note">O áudio interno captura apps que permitem (vídeos, jogos, música). Chamadas e alguns apps protegidos ficam mudos por regra do Android.</string>
+    <string name="start">Iniciar</string>
+    <string name="stop">Parar</string>
+    <string name="notif_channel">Captura de tela</string>
+</resources>

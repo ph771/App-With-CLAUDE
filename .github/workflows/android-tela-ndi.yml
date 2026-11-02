@@ -1,0 +1,49 @@
+name: Tela NDI - APK Android
+
+on:
+  push:
+    paths:
+      - "ndi-screen-recorder/**"
+      - ".github/workflows/android-tela-ndi.yml"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ndi-screen-recorder
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Baixar a biblioteca NDI (SDK oficial)
+        id: ndi
+        continue-on-error: true
+        env:
+          NDI_SDK_URL: ${{ vars.NDI_SDK_URL }}
+        run: ./scripts/fetch-ndi-sdk.sh
+
+      - name: Testes automáticos
+        run: ./gradlew --no-daemon testReleaseUnitTest
+
+      - name: Gerar APK
+        run: ./gradlew --no-daemon assembleRelease
+
+      - name: Renomear APK
+        run: |
+          mkdir -p out
+          suffix=$([ "${{ steps.ndi.outcome }}" = "success" ] && echo "com-NDI" || echo "SEM-NDI")
+          cp app/build/outputs/apk/release/app-release.apk "out/TelaNDI-${suffix}.apk"
+          ls -l out
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TelaNDI-APK
+          path: ndi-screen-recorder/out/*.apk

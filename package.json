@@ -1,0 +1,10 @@
+{
+  "name": "teleprompter-de-bolso",
+  "private": true,
+  "type": "module",
+  "description": "App para iPhone que grava a câmera da frente com um teleprompter visível só na tela.",
+  "scripts": {
+    "test": "node --test \"testes/*.test.js\"",
+    "servidor": "node testes/servidor.js"
+  }
+}

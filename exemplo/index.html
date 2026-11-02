@@ -1,0 +1,679 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Teleprompter de Bolso</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Figtree:wght@400;500;600;700&display=swap">
+<style>html{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font-size:14px}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+<style>
+/* Layout: um app do tamanho do celular com três telas: texto, câmera (com a faixa do teleprompter flutuando) e vídeo pronto. Vertical ou deitado. Visual escuro, como um app de câmera. */
+:root {
+  --ink: #0e0f12;
+  --panel: #16181d;
+  --field: #0b0c0f;
+  --line: #2b2f37;
+  --text: #f3efe6;
+  --muted: #a3a7af;
+  --cue: #ffc94a;
+  --cue-ink: #1d1503;
+  --rec: #ff3b30;
+  --font-ui: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-cue: "Atkinson Hyperlegible", "Figtree", system-ui, -apple-system, sans-serif;
+  --cue-size: 32px;
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+body {
+  background: var(--ink);
+  color: var(--text);
+  font-family: var(--font-ui);
+  -webkit-font-smoothing: antialiased;
+}
+button, input, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 3px solid var(--cue); outline-offset: 2px; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* ---------- moldura ---------- */
+.phone {
+  position: relative;
+  width: 100%;
+  max-width: 440px;
+  height: 100%;
+  margin: 0 auto;
+  overflow: hidden;
+  background: #000;
+}
+.phone.deitado { max-width: none; }
+.island { display: none; }
+@media (min-width: 620px) and (min-height: 720px) {
+  body { display: grid; place-items: center; padding-block: 24px; box-sizing: border-box; }
+  .phone {
+    width: 400px;
+    height: min(860px, 100%);
+    border-radius: 48px;
+    border: 10px solid #23262c;
+    box-shadow: 0 30px 80px rgba(0,0,0,.55);
+  }
+  .island {
+    display: block; position: absolute; z-index: 30; top: 11px; left: 50%;
+    width: 112px; height: 32px; margin-left: -56px; border-radius: 20px; background: #000;
+  }
+  .island::after {
+    content: ""; position: absolute; right: 22px; top: 10px; width: 12px; height: 12px;
+    border-radius: 50%; background: radial-gradient(circle at 35% 35%, #3b4a66, #0a0d14 70%);
+  }
+  .top-bar { padding-top: 52px !important; }
+  .prompter.pos-topo { top: 100px !important; }
+  .setup { padding-top: 56px !important; }
+  .done { padding-top: 56px !important; }
+
+  /* moldura deitada (vídeo na horizontal) */
+  .phone.deitado { width: min(860px, calc(100vw - 48px)); height: auto; aspect-ratio: 19.5 / 9; }
+  .phone.deitado .island { top: 50%; left: 11px; width: 32px; height: 112px; margin: -56px 0 0 0; }
+  .phone.deitado .island::after { right: 10px; top: 24px; }
+  .phone.deitado .top-bar { padding-top: 12px !important; padding-left: 56px; }
+  .phone.deitado .prompter.pos-topo { top: 58px !important; left: 56px; }
+  .phone.deitado .done { padding-top: 18px !important; padding-left: 60px; }
+}
+
+.screen { position: absolute; inset: 0; display: flex; flex-direction: column; }
+
+/* ---------- tela 1: texto ---------- */
+.setup {
+  background: var(--panel);
+  padding: 18px 18px 20px;
+  gap: 16px;
+  overflow-y: auto;
+}
+.deitado .setup { padding-inline: max(18px, calc((100% - 560px) / 2)); }
+.badge {
+  align-self: flex-start;
+  margin: 0;
+  padding: 5px 10px;
+  border: 1px solid color-mix(in srgb, var(--cue) 55%, transparent);
+  border-radius: 999px;
+  color: var(--cue);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.setup h1, .done h1 { margin: 0; font-size: 28px; line-height: 1.15; font-weight: 700; text-wrap: balance; }
+.sub { margin: 4px 0 0; color: var(--muted); font-size: 15px; line-height: 1.45; }
+textarea {
+  flex: 1 0 150px;
+  min-height: 150px;
+  resize: none;
+  background: var(--field);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 14px 16px;
+  font-family: var(--font-cue);
+  font-size: 17px;
+  line-height: 1.5;
+  color: var(--text);
+}
+.settings { display: grid; gap: 14px; }
+.field { display: grid; gap: 8px; margin: 0; padding: 0; border: 0; min-width: 0; }
+.field-top { display: flex; justify-content: space-between; align-items: baseline; font-size: 15px; font-weight: 600; }
+.field legend { font-size: 15px; font-weight: 600; padding: 0; margin-bottom: 8px; }
+output { color: var(--muted); font-weight: 500; font-variant-numeric: tabular-nums; }
+input[type="range"] { width: 100%; accent-color: var(--cue); margin: 0; height: 28px; }
+.seg { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 4px; background: var(--field); border: 1px solid var(--line); border-radius: 14px; }
+.seg button {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  border: 0; border-radius: 10px; padding: 10px 8px; background: transparent;
+  color: var(--muted); font-size: 15px; font-weight: 600;
+}
+.seg button[aria-pressed="true"] { background: var(--cue); color: var(--cue-ink); }
+.forma { display: inline-block; border: 2px solid currentColor; border-radius: 3px; }
+.forma.v { width: 10px; height: 17px; }
+.forma.h { width: 17px; height: 10px; }
+.note { margin: 2px 0 0; font-size: 13.5px; line-height: 1.45; color: var(--muted); }
+.primary {
+  flex: none;
+  width: 100%; min-height: 54px; border: 0; border-radius: 16px;
+  background: var(--cue); color: var(--cue-ink);
+  font-size: 17px; font-weight: 700;
+}
+
+/* ---------- câmera de mentira ---------- */
+.feed { position: absolute; inset: 0; overflow: hidden;
+  background:
+    radial-gradient(circle at 82% 18%, rgba(255, 196, 120, .38), transparent 42%),
+    linear-gradient(180deg, #3b3531 0%, #2d2825 62%, #1e1b19 100%);
+}
+.feed svg { position: absolute; inset: 0; width: 100%; height: 100%; animation: respira 6s ease-in-out infinite; transform-origin: 50% 100%; }
+@keyframes respira { 50% { transform: scale(1.012); } }
+.pupilas { transition: transform .4s ease; }
+.olhar-baixo .pupilas { transform: translateY(5px); }
+
+/* ---------- tela 2: câmera ---------- */
+.camera { background: #000; }
+.top-bar {
+  position: absolute; z-index: 10; top: 0; left: 0; right: 0;
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 12px 14px;
+}
+.chip {
+  border: 0; border-radius: 999px; padding: 8px 13px;
+  background: rgba(0,0,0,.55); color: #fff; font-size: 14.5px; font-weight: 600;
+  -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+}
+.chip:disabled { opacity: .45; cursor: default; }
+.timer {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 6px 11px; border-radius: 999px; background: var(--rec); color: #fff;
+  font-weight: 700; font-size: 15px; font-variant-numeric: tabular-nums;
+}
+.timer[hidden] { display: none; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: #fff; animation: pisca 1s steps(2) infinite; }
+@keyframes pisca { 50% { opacity: .2; } }
+
+.prompter {
+  position: absolute; z-index: 5; left: 12px; right: 12px; height: 34%;
+  border-radius: 22px; background: rgba(8, 9, 12, .62);
+  overflow: hidden; transition: top .4s ease, left .4s ease, right .4s ease;
+}
+.prompter.pos-meio { top: 31%; }
+.prompter.pos-topo { top: 60px; }
+.scroller {
+  position: absolute; inset: 0; padding: 0 20px 0 32px;
+  -webkit-mask-image: linear-gradient(transparent 0, rgba(0,0,0,.35) 8%, #000 19%, #000 74%, transparent 100%);
+  mask-image: linear-gradient(transparent 0, rgba(0,0,0,.35) 8%, #000 19%, #000 74%, transparent 100%);
+}
+.rolling {
+  font-family: var(--font-cue); font-weight: 700;
+  font-size: var(--cue-size); line-height: 1.32; color: var(--text);
+  white-space: pre-wrap; overflow-wrap: anywhere; will-change: transform;
+}
+.cue-mark {
+  position: absolute; z-index: 2; left: 12px;
+  top: calc(22% + var(--cue-size) * .66 - 8px);
+  width: 0; height: 0;
+  border-top: 8px solid transparent; border-bottom: 8px solid transparent;
+  border-left: 11px solid var(--cue);
+}
+
+.countdown {
+  position: absolute; z-index: 20; inset: 0; display: grid; place-items: center;
+  font-family: var(--font-cue); font-weight: 700; font-size: 150px; color: #fff;
+  text-shadow: 0 6px 30px rgba(0,0,0,.6); pointer-events: none;
+}
+.countdown[hidden] { display: none; }
+.countdown.pop { animation: pop .9s ease-out; }
+@keyframes pop { from { transform: scale(1.35); opacity: 0; } 30% { opacity: 1; } to { transform: scale(1); } }
+
+.controls {
+  position: absolute; z-index: 10; left: 0; right: 0; bottom: 0;
+  padding: 40px 14px 20px;
+  background: linear-gradient(transparent, rgba(0,0,0,.72) 45%);
+  display: grid; gap: 14px;
+}
+.hint { margin: 0; text-align: center; font-size: 14px; color: rgba(255,255,255,.85); text-wrap: balance; }
+.hint[hidden] { display: none; }
+.controls-row { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 10px; }
+.speed {
+  justify-self: start; display: flex; align-items: center; gap: 2px;
+  padding: 3px; border-radius: 999px; background: rgba(0,0,0,.55);
+}
+.speed button {
+  width: 38px; height: 38px; border: 0; border-radius: 50%;
+  background: rgba(255,255,255,.12); color: #fff; font-size: 20px; font-weight: 700; line-height: 1;
+}
+.speed span { min-width: 58px; text-align: center; font-size: 13px; font-weight: 600; line-height: 1.15; }
+.rec {
+  width: 78px; height: 78px; border-radius: 50%; border: 4px solid #fff; padding: 0;
+  background: transparent; display: grid; place-items: center;
+}
+.rec span {
+  width: 60px; height: 60px; border-radius: 50%; background: var(--rec);
+  transition: width .25s ease, height .25s ease, border-radius .25s ease;
+}
+.rec.on span { width: 30px; height: 30px; border-radius: 7px; }
+.side-btn { justify-self: end; }
+
+/* aviso para girar o celular */
+.gire {
+  position: absolute; z-index: 25; inset: 0; display: grid; place-content: center; justify-items: center;
+  gap: 14px; padding: 24px; text-align: center; background: rgba(6, 7, 9, .86);
+}
+.gire[hidden] { display: none; }
+.gire-icone {
+  width: 46px; height: 78px; border: 4px solid #fff; border-radius: 12px;
+  animation: gira 2.4s ease-in-out infinite;
+}
+.gire.para-vertical .gire-icone { animation-name: desgira; }
+@keyframes gira { 0%, 20% { transform: rotate(0); } 55%, 100% { transform: rotate(-90deg); } }
+@keyframes desgira { 0%, 20% { transform: rotate(-90deg); } 55%, 100% { transform: rotate(0); } }
+.gire p { margin: 0; }
+.gire-titulo { font-size: 20px; font-weight: 700; }
+.gire-sub { color: var(--muted); font-size: 15px; line-height: 1.45; max-width: 30ch; }
+
+/* câmera deitada: controles numa coluna do lado oposto à câmera */
+.deitado .prompter { height: 50%; }
+.deitado .prompter.pos-meio { top: 25%; left: 16%; right: 166px; }
+.deitado .prompter.pos-topo { top: 58px; left: 12px; right: 46%; }
+.deitado .top-bar { right: 150px; }
+.deitado .controls {
+  left: auto; right: 0; top: 0; bottom: 0; width: 150px;
+  padding: 14px 12px; align-content: center; justify-items: center;
+  background: linear-gradient(90deg, transparent, rgba(0,0,0,.72) 40%);
+}
+.deitado .hint { display: none; }
+.deitado .controls-row { grid-template-columns: 1fr; justify-items: center; gap: 18px; }
+.deitado .speed, .deitado .side-btn { justify-self: center; }
+.deitado .countdown { font-size: 120px; }
+.deitado.camera-direita .prompter.pos-meio { left: 166px; right: 16%; }
+.deitado.camera-direita .prompter.pos-topo { left: 46%; right: 12px; }
+.deitado.camera-direita .top-bar { right: 0; left: 150px; }
+.deitado.camera-direita .controls { right: auto; left: 0; background: linear-gradient(270deg, transparent, rgba(0,0,0,.72) 40%); }
+
+/* ---------- tela 3: pronto ---------- */
+.done {
+  display: grid; gap: 14px;
+  grid-template-areas: "titulo" "video" "lado";
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  background: var(--panel); padding: 18px 18px 20px;
+}
+.done h1 { grid-area: titulo; }
+.preview-wrap { grid-area: video; min-height: 0; display: flex; justify-content: center; align-items: center; }
+.done-side { grid-area: lado; display: grid; gap: 14px; align-content: start; }
+.preview {
+  position: relative; height: 100%; max-width: 100%; aspect-ratio: 9 / 16;
+  border-radius: 20px; overflow: hidden; background: #000;
+}
+.formato-horizontal .preview { aspect-ratio: 16 / 9; height: auto; width: 100%; max-height: 100%; }
+.deitado .done {
+  grid-template-areas: "video titulo" "video lado";
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
+  column-gap: 20px;
+}
+.deitado .done-side { overflow-y: auto; }
+.play {
+  position: absolute; z-index: 2; left: 50%; top: 82%; width: 56px; height: 56px; margin: -28px 0 0 -28px;
+  border-radius: 50%; background: rgba(0,0,0,.5); display: grid; place-items: center;
+}
+.play::before {
+  content: ""; margin-left: 5px; width: 0; height: 0;
+  border-top: 13px solid transparent; border-bottom: 13px solid transparent; border-left: 20px solid #fff;
+}
+.duration {
+  position: absolute; z-index: 2; left: 10px; bottom: 10px; padding: 4px 9px; border-radius: 8px;
+  background: rgba(0,0,0,.6); color: #fff; font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums;
+}
+.caption { margin: 0; text-align: center; color: var(--muted); font-size: 15px; line-height: 1.45; text-wrap: balance; }
+.deitado .caption { text-align: left; }
+.row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.secondary {
+  min-height: 48px; border-radius: 14px; border: 1px solid var(--line);
+  background: var(--field); font-size: 15px; font-weight: 600;
+}
+.toast {
+  margin: 0; padding: 12px 14px; border-radius: 14px;
+  background: color-mix(in srgb, var(--cue) 16%, var(--panel));
+  border: 1px solid color-mix(in srgb, var(--cue) 45%, transparent);
+  font-size: 14px; line-height: 1.45;
+}
+.toast[hidden] { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .feed svg, .dot, .gire-icone { animation: none; }
+  .countdown.pop { animation: none; }
+  .prompter, .pupilas { transition: none; }
+}
+</style>
+
+<div class="phone olhar-baixo" id="celular">
+  <div class="island" aria-hidden="true"></div>
+
+  <!-- TELA 1: TEXTO -->
+  <section id="tela-texto" class="screen setup" aria-label="Seu texto">
+    <p class="badge">Tela de exemplo · ainda não grava</p>
+    <header>
+      <h1>Seu texto</h1>
+      <p class="sub">Cole ou escreva o que você vai falar. Ele passa na tela enquanto você grava.</p>
+    </header>
+    <label for="roteiro" class="sr">Texto do vídeo</label>
+    <textarea id="roteiro" spellcheck="false">Oi! Hoje eu vou te mostrar três jeitos simples de organizar a sua semana.
+
+Primeiro: escolha só três tarefas importantes por dia. O resto pode esperar.
+
+Segundo: separe um horário fixo para responder mensagens, em vez de olhar o celular toda hora.
+
+Terceiro: no domingo à noite, gaste dez minutos planejando os próximos dias.
+
+Se esse vídeo te ajudou, salve para ver depois e me conta nos comentários qual dica você vai testar primeiro.</textarea>
+
+    <div class="settings">
+      <fieldset class="field">
+        <legend>Formato do vídeo</legend>
+        <div class="seg">
+          <button type="button" id="fmt-vertical" data-formato="vertical" aria-pressed="true"><span class="forma v" aria-hidden="true"></span>Vertical</button>
+          <button type="button" id="fmt-horizontal" data-formato="horizontal" aria-pressed="false"><span class="forma h" aria-hidden="true"></span>Horizontal</button>
+        </div>
+        <p class="note" id="nota-formato"></p>
+      </fieldset>
+      <div class="field">
+        <div class="field-top"><label for="vel">Velocidade do texto</label><output id="vel-out" for="vel"></output></div>
+        <input type="range" id="vel" min="1" max="10" value="4">
+      </div>
+      <div class="field">
+        <div class="field-top"><label for="tam">Tamanho da letra</label><output id="tam-out" for="tam"></output></div>
+        <input type="range" id="tam" min="22" max="48" step="2" value="32">
+      </div>
+      <fieldset class="field">
+        <legend>Onde o texto aparece</legend>
+        <div class="seg">
+          <button type="button" id="pos-meio" data-pos="meio" aria-pressed="true">No meio</button>
+          <button type="button" id="pos-topo" data-pos="topo" aria-pressed="false">Perto da câmera</button>
+        </div>
+        <p class="note" id="nota-pos"></p>
+      </fieldset>
+    </div>
+    <button type="button" id="abrir" class="primary">Abrir câmera</button>
+  </section>
+
+  <!-- TELA 2: CÂMERA -->
+  <section id="tela-camera" class="screen camera" aria-label="Câmera" hidden>
+    <div class="feed" id="feed-camera" aria-hidden="true"></div>
+    <div class="top-bar">
+      <button type="button" id="voltar" class="chip">‹ Texto</button>
+      <div id="cronometro" class="timer" hidden><span class="dot"></span><span id="tempo">00:00</span></div>
+      <button type="button" id="trocar-pos" class="chip"></button>
+    </div>
+
+    <div id="prompter" class="prompter pos-meio" aria-live="off">
+      <div class="cue-mark" aria-hidden="true"></div>
+      <div class="scroller"><div id="texto-rolando" class="rolling"></div></div>
+    </div>
+
+    <div id="contagem" class="countdown" hidden>3</div>
+
+    <div class="controls">
+      <p id="dica" class="hint">Só você aparece no vídeo. O texto fica só na sua tela.</p>
+      <div class="controls-row">
+        <div class="speed">
+          <button type="button" id="mais-devagar" aria-label="Texto mais devagar">−</button>
+          <span id="vel-cam"></span>
+          <button type="button" id="mais-rapido" aria-label="Texto mais rápido">+</button>
+        </div>
+        <button type="button" id="gravar" class="rec" aria-label="Começar a gravar"><span></span></button>
+        <button type="button" id="pausar" class="chip side-btn">Rolar texto</button>
+      </div>
+    </div>
+
+    <div id="gire" class="gire" hidden>
+      <div class="gire-icone" aria-hidden="true"></div>
+      <p class="gire-titulo" id="gire-titulo">Gire o celular</p>
+      <p class="gire-sub" id="gire-sub"></p>
+    </div>
+  </section>
+
+  <!-- TELA 3: PRONTO -->
+  <section id="tela-pronto" class="screen done" aria-label="Vídeo pronto" hidden>
+    <h1>Vídeo pronto</h1>
+    <div class="preview-wrap">
+      <div class="preview">
+        <div class="feed" id="feed-preview" aria-hidden="true"></div>
+        <div class="play" aria-hidden="true"></div>
+        <span class="duration" id="duracao">00:00</span>
+      </div>
+    </div>
+    <div class="done-side">
+      <p class="caption">Assim fica o seu vídeo: só você, sem o texto por cima.</p>
+      <button type="button" id="salvar" class="primary">Salvar nas Fotos</button>
+      <p id="aviso" class="toast" hidden>No app de verdade, este botão abre a opção “Salvar Vídeo” do iPhone e o vídeo vai direto para o app Fotos.</p>
+      <div class="row">
+        <button type="button" id="de-novo" class="secondary">Gravar de novo</button>
+        <button type="button" id="editar" class="secondary">Editar texto</button>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+(function () {
+  var $ = function (s) { return document.querySelector(s); };
+  var celular = $('#celular');
+  var telas = { texto: $('#tela-texto'), camera: $('#tela-camera'), pronto: $('#tela-pronto') };
+  var telaAtual = 'texto';
+  function mostrar(nome) {
+    telaAtual = nome;
+    Object.keys(telas).forEach(function (k) { telas[k].hidden = k !== nome; });
+    atualizarOrientacao();
+  }
+
+  // Pessoa de exemplo no lugar da câmera
+  var PESSOA =
+    '<svg viewBox="0 0 400 800" preserveAspectRatio="xMidYMax slice">' +
+      '<rect x="24" y="110" width="118" height="180" rx="6" fill="rgba(190,215,255,.13)"/>' +
+      '<rect x="80" y="110" width="4" height="180" fill="rgba(0,0,0,.25)"/>' +
+      '<rect x="24" y="196" width="118" height="4" fill="rgba(0,0,0,.25)"/>' +
+      '<rect x="262" y="250" width="120" height="8" rx="3" fill="rgba(0,0,0,.28)"/>' +
+      '<rect x="280" y="214" width="14" height="36" rx="2" fill="#6d4f3a"/>' +
+      '<rect x="298" y="206" width="12" height="44" rx="2" fill="#4f6b5c"/>' +
+      '<rect x="314" y="220" width="16" height="30" rx="2" fill="#8a6a45"/>' +
+      '<rect x="-150" y="330" width="110" height="160" rx="6" fill="rgba(190,215,255,.10)"/>' +
+      '<rect x="440" y="470" width="150" height="8" rx="3" fill="rgba(0,0,0,.28)"/>' +
+      '<rect x="460" y="430" width="16" height="40" rx="2" fill="#6d4f3a"/>' +
+      '<rect x="480" y="440" width="14" height="30" rx="2" fill="#4f6b5c"/>' +
+      '<path d="M30 800 C 44 652, 116 596, 200 590 C 284 596, 356 652, 370 800 Z" fill="#33566a"/>' +
+      '<path d="M160 592 L200 640 L240 592 Z" fill="#284555"/>' +
+      '<rect x="172" y="500" width="56" height="104" rx="22" fill="#b97d5c"/>' +
+      '<ellipse cx="200" cy="432" rx="80" ry="98" fill="#c98f6d"/>' +
+      '<ellipse cx="121" cy="440" rx="10" ry="20" fill="#bd8463"/>' +
+      '<ellipse cx="279" cy="440" rx="10" ry="20" fill="#bd8463"/>' +
+      '<path d="M118 428 C 112 330, 176 300, 214 306 C 272 312, 296 356, 284 420 C 266 378, 204 366, 150 392 C 136 400, 126 414, 118 428 Z" fill="#2a1d16"/>' +
+      '<path d="M152 414 Q172 404 190 412" stroke="#2a1d16" stroke-width="6" fill="none" stroke-linecap="round"/>' +
+      '<path d="M210 412 Q228 404 248 414" stroke="#2a1d16" stroke-width="6" fill="none" stroke-linecap="round"/>' +
+      '<ellipse cx="172" cy="440" rx="13" ry="8" fill="#f4ece4"/>' +
+      '<ellipse cx="228" cy="440" rx="13" ry="8" fill="#f4ece4"/>' +
+      '<g class="pupilas"><circle cx="172" cy="439" r="5.5" fill="#1b1410"/><circle cx="228" cy="439" r="5.5" fill="#1b1410"/></g>' +
+      '<path d="M200 448 L194 474 L204 476" stroke="#a96d4f" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>' +
+      '<path d="M178 494 Q200 510 222 494" stroke="#8e4b3c" stroke-width="5" fill="none" stroke-linecap="round"/>' +
+    '</svg>';
+  document.querySelectorAll('.feed').forEach(function (el) { el.innerHTML = PESSOA; });
+  var VB_EM_PE = '0 0 400 800', VB_DEITADO = '-240 280 880 440';
+  function enquadrar(svg, deitado) {
+    svg.setAttribute('viewBox', deitado ? VB_DEITADO : VB_EM_PE);
+    svg.setAttribute('preserveAspectRatio', deitado ? 'xMidYMid slice' : 'xMidYMax slice');
+  }
+
+  var roteiro = $('#roteiro'), vel = $('#vel'), tam = $('#tam');
+  var faixa = $('#prompter'), rolando_el = $('#texto-rolando');
+  var pos = 'meio', formato = 'vertical';
+
+  // Orientação: vertical ou deitado
+  var mqMoldura = window.matchMedia('(min-width: 620px) and (min-height: 720px)');
+  var mqDeitado = window.matchMedia('(orientation: landscape)');
+  function cameraDoLadoDireito() {
+    if (typeof window.orientation === 'number') return window.orientation === -90;
+    var a = screen.orientation && screen.orientation.angle;
+    return a === 270;
+  }
+  function atualizarOrientacao() {
+    var horizontal = formato === 'horizontal';
+    var emMoldura = mqMoldura.matches;
+    var deitado = emMoldura ? (horizontal && telaAtual !== 'texto') : mqDeitado.matches;
+    celular.classList.toggle('deitado', deitado);
+    celular.classList.toggle('formato-horizontal', horizontal);
+    celular.classList.toggle('camera-direita', deitado && !emMoldura && cameraDoLadoDireito());
+    enquadrar($('#feed-camera svg'), deitado);
+    enquadrar($('#feed-preview svg'), horizontal);
+    var girar = !emMoldura && telaAtual === 'camera' && horizontal !== mqDeitado.matches;
+    var gire = $('#gire');
+    gire.hidden = !girar;
+    gire.classList.toggle('para-vertical', !horizontal);
+    $('#gire-titulo').textContent = horizontal ? 'Gire o celular para a horizontal' : 'Gire o celular para a vertical';
+    $('#gire-sub').textContent = horizontal
+      ? 'Você escolheu vídeo deitado, como no YouTube. Deixe a trava de rotação do iPhone desligada.'
+      : 'Você escolheu vídeo em pé, como no Reels e no TikTok.';
+    requestAnimationFrame(layout);
+  }
+
+  var NOTAS_FORMATO = {
+    vertical: 'Em pé, para Reels, TikTok, Stories e Shorts.',
+    horizontal: 'Deitado, para YouTube, TV e computador. Você grava com o celular de lado.'
+  };
+  function setFormato(f) {
+    formato = f;
+    document.querySelectorAll('[data-formato]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.formato === f)); });
+    $('#nota-formato').textContent = NOTAS_FORMATO[f];
+    atualizarOrientacao();
+  }
+
+  function nomeVel(v) { return v <= 3 ? 'Devagar' : v <= 6 ? 'Média' : 'Rápida'; }
+  function syncVel() {
+    var v = +vel.value;
+    $('#vel-out').textContent = nomeVel(v) + ' (' + v + ')';
+    $('#vel-cam').innerHTML = nomeVel(v) + '<br>' + v + ' de 10';
+  }
+  function syncTam() {
+    celular.style.setProperty('--cue-size', tam.value + 'px');
+    $('#tam-out').textContent = tam.value < 28 ? 'Pequena' : tam.value < 38 ? 'Média' : 'Grande';
+    layout();
+  }
+  var NOTAS = {
+    meio: 'No meio, seus olhos ficam longe da câmera. Quem assiste percebe que você está lendo.',
+    topo: 'Perto da câmera, parece que você está olhando para quem assiste. Na horizontal, a câmera fica na lateral do celular, e o texto vai para esse lado.'
+  };
+  var DICAS = {
+    meio: 'No meio, seus olhos ficam longe da câmera.',
+    topo: 'Perto da câmera, parece que você olha para quem assiste.'
+  };
+  function setPos(p) {
+    pos = p;
+    document.querySelectorAll('[data-pos]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.pos === p)); });
+    faixa.classList.toggle('pos-meio', p === 'meio');
+    faixa.classList.toggle('pos-topo', p === 'topo');
+    celular.classList.toggle('olhar-baixo', p === 'meio');
+    $('#trocar-pos').textContent = p === 'meio' ? 'Texto: no meio' : 'Texto: perto da câmera';
+    $('#nota-pos').textContent = NOTAS[p];
+    if (!gravando) mostrarDica(DICAS[p]);
+    requestAnimationFrame(layout);
+  }
+
+  var dicaTimer = null;
+  var DICA_PADRAO = 'Só você aparece no vídeo. O texto fica só na sua tela.';
+  function mostrarDica(txt) {
+    if (telas.camera.hidden) return;
+    $('#dica').textContent = txt;
+    clearTimeout(dicaTimer);
+    dicaTimer = setTimeout(function () { $('#dica').textContent = DICA_PADRAO; }, 4000);
+  }
+
+  // Rolagem do texto
+  var offset = 0, rolando = false, ultimo = 0;
+  function layout() {
+    var h = faixa.clientHeight;
+    if (!h) return;
+    rolando_el.style.paddingTop = Math.round(h * 0.22) + 'px';
+    rolando_el.style.paddingBottom = Math.round(h * 0.78) + 'px';
+    if (offset > maxOffset()) offset = maxOffset();
+    aplicar();
+  }
+  function maxOffset() { return Math.max(0, rolando_el.offsetHeight - faixa.clientHeight); }
+  function aplicar() { rolando_el.style.transform = 'translateY(' + (-offset) + 'px)'; }
+  function pxPorSeg() { return 10 + (+vel.value) * 7; }
+  function passo(t) {
+    if (!rolando) return;
+    var dt = Math.min(0.1, (t - ultimo) / 1000);
+    ultimo = t;
+    offset += pxPorSeg() * dt;
+    if (offset >= maxOffset()) { offset = maxOffset(); aplicar(); pararRolagem(); return; }
+    aplicar();
+    requestAnimationFrame(passo);
+  }
+  function iniciarRolagem() {
+    if (rolando) return;
+    if (offset >= maxOffset()) { offset = 0; aplicar(); }
+    rolando = true; ultimo = performance.now();
+    $('#pausar').textContent = 'Pausar texto';
+    requestAnimationFrame(passo);
+  }
+  function pararRolagem() {
+    rolando = false;
+    $('#pausar').textContent = (offset > 0 && offset >= maxOffset()) ? 'Do início' : 'Rolar texto';
+  }
+  function alternarRolagem() { if (contando) return; rolando ? pararRolagem() : iniciarRolagem(); }
+
+  // Gravação de mentira
+  var gravando = false, contando = false, seg = 0, timerId = null;
+  function fmt(s) { var m = Math.floor(s / 60), r = s % 60; return (m < 10 ? '0' : '') + m + ':' + (r < 10 ? '0' : '') + r; }
+  function contagem() {
+    contando = true;
+    pararRolagem(); offset = 0; aplicar();
+    $('#voltar').disabled = true;
+    $('#dica').hidden = true;
+    var c = $('#contagem'), n = 3;
+    c.hidden = false; c.textContent = n; c.classList.remove('pop'); void c.offsetWidth; c.classList.add('pop');
+    var id = setInterval(function () {
+      n--;
+      if (n === 0) { clearInterval(id); c.hidden = true; contando = false; comecar(); return; }
+      c.textContent = n; c.classList.remove('pop'); void c.offsetWidth; c.classList.add('pop');
+    }, 1000);
+  }
+  function comecar() {
+    gravando = true; seg = 0;
+    $('#tempo').textContent = '00:00';
+    $('#cronometro').hidden = false;
+    $('#gravar').classList.add('on');
+    $('#gravar').setAttribute('aria-label', 'Parar de gravar');
+    timerId = setInterval(function () { seg++; $('#tempo').textContent = fmt(seg); }, 1000);
+    iniciarRolagem();
+  }
+  function parar() {
+    gravando = false;
+    clearInterval(timerId);
+    pararRolagem();
+    $('#cronometro').hidden = true;
+    $('#gravar').classList.remove('on');
+    $('#gravar').setAttribute('aria-label', 'Começar a gravar');
+    $('#voltar').disabled = false;
+    $('#dica').hidden = false;
+    $('#duracao').textContent = fmt(Math.max(seg, 1));
+    $('#aviso').hidden = true;
+    mostrar('pronto');
+  }
+
+  function abrirCamera() {
+    rolando_el.textContent = roteiro.value.trim() || 'Escreva seu texto na tela anterior.';
+    offset = 0; pararRolagem();
+    mostrar('camera');
+    $('#dica').textContent = DICA_PADRAO;
+  }
+
+  // Ligações
+  vel.addEventListener('input', syncVel);
+  tam.addEventListener('input', syncTam);
+  document.querySelectorAll('[data-pos]').forEach(function (b) { b.addEventListener('click', function () { setPos(b.dataset.pos); }); });
+  document.querySelectorAll('[data-formato]').forEach(function (b) { b.addEventListener('click', function () { setFormato(b.dataset.formato); }); });
+  $('#abrir').addEventListener('click', abrirCamera);
+  $('#voltar').addEventListener('click', function () { pararRolagem(); mostrar('texto'); });
+  $('#trocar-pos').addEventListener('click', function () { setPos(pos === 'meio' ? 'topo' : 'meio'); });
+  $('#mais-devagar').addEventListener('click', function () { vel.value = Math.max(1, +vel.value - 1); syncVel(); });
+  $('#mais-rapido').addEventListener('click', function () { vel.value = Math.min(10, +vel.value + 1); syncVel(); });
+  $('#pausar').addEventListener('click', alternarRolagem);
+  faixa.addEventListener('click', alternarRolagem);
+  $('#gravar').addEventListener('click', function () { if (contando) return; gravando ? parar() : contagem(); });
+  $('#salvar').addEventListener('click', function () { $('#aviso').hidden = false; });
+  $('#de-novo').addEventListener('click', abrirCamera);
+  $('#editar').addEventListener('click', function () { mostrar('texto'); });
+  function aoGirar() { atualizarOrientacao(); }
+  if (mqDeitado.addEventListener) { mqDeitado.addEventListener('change', aoGirar); mqMoldura.addEventListener('change', aoGirar); }
+  window.addEventListener('orientationchange', function () { setTimeout(aoGirar, 200); });
+  window.addEventListener('resize', layout);
+
+  syncVel(); syncTam(); setPos('meio'); setFormato('vertical');
+})();
+</script>
+</body>
+</html>

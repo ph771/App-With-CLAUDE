@@ -1,0 +1,335 @@
+/* Teleprompter de Bolso
+   Um app do tamanho do celular com três telas: texto, câmera (com a faixa do teleprompter
+   flutuando por cima) e vídeo pronto. Funciona em pé ou deitado. Visual escuro de câmera. */
+
+@font-face {
+  font-family: "Figtree";
+  src: url("fontes/figtree-variavel.woff2") format("woff2");
+  font-weight: 300 900;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Atkinson Hyperlegible";
+  src: url("fontes/atkinson-hyperlegible-700.woff2") format("woff2");
+  font-weight: 700;
+  font-display: swap;
+}
+
+:root {
+  --ink: #0e0f12;
+  --panel: #16181d;
+  --field: #0b0c0f;
+  --line: #2b2f37;
+  --text: #f3efe6;
+  --muted: #a3a7af;
+  --cue: #ffc94a;
+  --cue-ink: #1d1503;
+  --rec: #ff3b30;
+  --font-ui: "Figtree", -apple-system, system-ui, "Segoe UI", sans-serif;
+  --font-cue: "Atkinson Hyperlegible", "Figtree", -apple-system, system-ui, sans-serif;
+  --cue-size: 32px;
+  --topo: env(safe-area-inset-top, 0px);
+  --base: env(safe-area-inset-bottom, 0px);
+  --esq: env(safe-area-inset-left, 0px);
+  --dir: env(safe-area-inset-right, 0px);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body {
+  background: var(--ink);
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+  -webkit-text-size-adjust: 100%;
+  overflow: hidden;
+}
+button, input, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+button:disabled { cursor: default; }
+:focus-visible { outline: 3px solid var(--cue); outline-offset: 2px; }
+[hidden] { display: none !important; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.num { font-variant-numeric: tabular-nums; }
+
+/* ---------- moldura ---------- */
+.phone {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  height: 100%;
+  height: 100dvh; /* altura visível de verdade no Safari, com ou sem a barra de endereço */
+  margin: 0 auto;
+  overflow: hidden;
+  background: #000;
+}
+.phone.deitado { max-width: none; }
+
+/* No computador, o app aparece dentro de um "celular". */
+@media (min-width: 620px) and (min-height: 720px) {
+  body { display: grid; place-items: center; padding: 24px; }
+  .phone {
+    width: 400px;
+    height: min(860px, 100%);
+    border-radius: 48px;
+    border: 10px solid #23262c;
+    box-shadow: 0 30px 80px rgba(0,0,0,.55);
+  }
+  .phone.deitado { width: min(860px, 100%); height: auto; aspect-ratio: 19.5 / 9; }
+}
+
+.screen { position: absolute; inset: 0; display: flex; flex-direction: column; }
+
+/* ---------- tela 1: texto ---------- */
+.setup {
+  background: var(--panel);
+  padding: calc(18px + var(--topo)) calc(18px + var(--dir)) calc(20px + var(--base)) calc(18px + var(--esq));
+  gap: 16px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.deitado .setup { padding-inline: max(calc(18px + var(--esq)), calc((100% - 560px) / 2)); }
+.setup h1, .done h1 { margin: 0; font-size: 28px; line-height: 1.15; font-weight: 700; text-wrap: balance; }
+.sub { margin: 4px 0 0; color: var(--muted); font-size: 15px; line-height: 1.45; }
+
+.dica-instalar {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 12px 14px; border-radius: 14px;
+  background: color-mix(in srgb, var(--cue) 12%, var(--panel));
+  border: 1px solid color-mix(in srgb, var(--cue) 40%, transparent);
+  font-size: 14px; line-height: 1.45;
+}
+.dica-instalar p { margin: 0; flex: 1; }
+.icone-compartilhar {
+  display: inline-block; width: 12px; height: 14px; vertical-align: -2px; margin: 0 1px;
+  border: 2px solid currentColor; border-top: 0; border-radius: 0 0 3px 3px; position: relative;
+}
+.icone-compartilhar::before {
+  content: ""; position: absolute; left: 50%; top: -6px; width: 2px; height: 11px; margin-left: -1px; background: currentColor;
+}
+.link-btn { flex: none; border: 0; background: none; padding: 2px 0; color: var(--cue); font-weight: 700; font-size: 14px; }
+
+textarea {
+  flex: 1 0 150px;
+  min-height: 150px;
+  resize: none;
+  background: var(--field);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 14px 16px;
+  font-family: var(--font-cue);
+  font-weight: 700;
+  font-size: 17px;
+  line-height: 1.5;
+  color: var(--text);
+}
+textarea::placeholder { color: var(--muted); font-weight: 400; }
+.settings { display: grid; gap: 14px; }
+.field { display: grid; gap: 8px; margin: 0; padding: 0; border: 0; min-width: 0; }
+.field-top { display: flex; justify-content: space-between; align-items: baseline; font-size: 15px; font-weight: 600; }
+.field legend { font-size: 15px; font-weight: 600; padding: 0; margin-bottom: 8px; }
+output { color: var(--muted); font-weight: 500; font-variant-numeric: tabular-nums; }
+input[type="range"] { width: 100%; accent-color: var(--cue); margin: 0; height: 28px; }
+.seg { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 4px; background: var(--field); border: 1px solid var(--line); border-radius: 14px; }
+.seg button {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  border: 0; border-radius: 10px; padding: 10px 8px; background: transparent;
+  color: var(--muted); font-size: 15px; font-weight: 600;
+}
+.seg button[aria-pressed="true"] { background: var(--cue); color: var(--cue-ink); }
+.forma { display: inline-block; border: 2px solid currentColor; border-radius: 3px; }
+.forma.v { width: 10px; height: 17px; }
+.forma.h { width: 17px; height: 10px; }
+.note { margin: 2px 0 0; font-size: 13.5px; line-height: 1.45; color: var(--muted); }
+.primary {
+  flex: none;
+  width: 100%; min-height: 54px; border: 0; border-radius: 16px;
+  background: var(--cue); color: var(--cue-ink);
+  font-size: 17px; font-weight: 700;
+}
+.secondary {
+  min-height: 48px; border-radius: 14px; border: 1px solid var(--line);
+  background: var(--field); font-size: 15px; font-weight: 600; padding: 0 12px;
+}
+
+/* ---------- tela 2: câmera ---------- */
+.camera { background: #000; }
+.previa {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: contain; background: #000;
+  transform: scaleX(-1); /* espelhado como selfie; o vídeo gravado sai normal */
+}
+.carregando {
+  position: absolute; inset: 0; margin: 0; display: grid; place-items: center;
+  color: var(--muted); font-size: 16px;
+}
+.top-bar {
+  position: absolute; z-index: 10; top: 0; left: 0; right: 0;
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: calc(12px + var(--topo)) calc(14px + var(--dir)) 12px calc(14px + var(--esq));
+}
+.chip {
+  border: 0; border-radius: 999px; padding: 8px 13px;
+  background: rgba(0,0,0,.55); color: #fff; font-size: 14.5px; font-weight: 600;
+  -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+}
+.chip:disabled { opacity: .45; }
+.timer {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 6px 11px; border-radius: 999px; background: var(--rec); color: #fff;
+  font-weight: 700; font-size: 15px; font-variant-numeric: tabular-nums;
+}
+.dot { width: 8px; height: 8px; border-radius: 50%; background: #fff; animation: pisca 1s steps(2) infinite; }
+@keyframes pisca { 50% { opacity: .2; } }
+
+.faixa-giro {
+  position: absolute; z-index: 12; left: 50%; transform: translateX(-50%);
+  top: calc(64px + var(--topo)); margin: 0; max-width: calc(100% - 28px);
+  padding: 8px 14px; border-radius: 12px; background: var(--cue); color: var(--cue-ink);
+  font-size: 14px; font-weight: 700; text-align: center;
+}
+
+.prompter {
+  position: absolute; z-index: 5; left: calc(12px + var(--esq)); right: calc(12px + var(--dir)); height: 34%;
+  border-radius: 22px; background: rgba(8, 9, 12, .62);
+  overflow: hidden; transition: top .4s ease, left .4s ease, right .4s ease;
+  touch-action: none; -webkit-user-select: none; user-select: none; cursor: grab;
+}
+.prompter.pos-meio { top: 31%; }
+.prompter.pos-topo { top: calc(60px + var(--topo)); }
+.scroller {
+  position: absolute; inset: 0; padding: 0 20px 0 32px;
+  -webkit-mask-image: linear-gradient(transparent 0, rgba(0,0,0,.35) 8%, #000 19%, #000 74%, transparent 100%);
+  mask-image: linear-gradient(transparent 0, rgba(0,0,0,.35) 8%, #000 19%, #000 74%, transparent 100%);
+}
+.rolling {
+  font-family: var(--font-cue); font-weight: 700;
+  font-size: var(--cue-size); line-height: 1.32; color: var(--text);
+  white-space: pre-wrap; overflow-wrap: anywhere; will-change: transform;
+}
+.rolling.vazio { color: var(--muted); }
+.cue-mark {
+  position: absolute; z-index: 2; left: 12px;
+  top: calc(22% + var(--cue-size) * .66 - 8px);
+  width: 0; height: 0;
+  border-top: 8px solid transparent; border-bottom: 8px solid transparent;
+  border-left: 11px solid var(--cue);
+}
+
+.countdown {
+  position: absolute; z-index: 20; inset: 0; display: grid; place-items: center;
+  font-family: var(--font-cue); font-weight: 700; font-size: 150px; color: #fff;
+  text-shadow: 0 6px 30px rgba(0,0,0,.6); pointer-events: none;
+}
+.countdown.pop { animation: pop .9s ease-out; }
+@keyframes pop { from { transform: scale(1.35); opacity: 0; } 30% { opacity: 1; } to { transform: scale(1); } }
+
+.controls {
+  position: absolute; z-index: 10; left: 0; right: 0; bottom: 0;
+  padding: 40px calc(14px + var(--dir)) calc(20px + var(--base)) calc(14px + var(--esq));
+  background: linear-gradient(transparent, rgba(0,0,0,.72) 45%);
+  display: grid; gap: 14px;
+}
+.hint { margin: 0; text-align: center; font-size: 14px; color: rgba(255,255,255,.85); text-wrap: balance; }
+.controls-row { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 10px; }
+.speed {
+  justify-self: start; display: flex; align-items: center; gap: 2px;
+  padding: 3px; border-radius: 999px; background: rgba(0,0,0,.55);
+}
+.speed button {
+  width: 38px; height: 38px; border: 0; border-radius: 50%;
+  background: rgba(255,255,255,.12); color: #fff; font-size: 20px; font-weight: 700; line-height: 1;
+}
+.speed span { min-width: 58px; text-align: center; font-size: 13px; font-weight: 600; line-height: 1.15; }
+.rec {
+  width: 78px; height: 78px; border-radius: 50%; border: 4px solid #fff; padding: 0;
+  background: transparent; display: grid; place-items: center;
+}
+.rec:disabled { opacity: .4; }
+.rec span {
+  width: 60px; height: 60px; border-radius: 50%; background: var(--rec);
+  transition: width .25s ease, height .25s ease, border-radius .25s ease;
+}
+.rec.on span { width: 30px; height: 30px; border-radius: 7px; }
+.side-btn { justify-self: end; }
+
+/* telas por cima da câmera: "gire o celular" e erros */
+.cobertura {
+  position: absolute; z-index: 25; inset: 0; display: grid; place-content: center; justify-items: center;
+  gap: 14px; padding: calc(24px + var(--topo)) calc(24px + var(--dir)) calc(24px + var(--base)) calc(24px + var(--esq));
+  text-align: center; background: rgba(6, 7, 9, .9);
+}
+.cobertura p { margin: 0; }
+.cobertura-titulo { font-size: 20px; font-weight: 700; text-wrap: balance; }
+.cobertura-sub { color: var(--muted); font-size: 15px; line-height: 1.5; max-width: 34ch; }
+.cobertura-botoes { display: grid; gap: 10px; width: min(300px, 100%); margin-top: 6px; }
+.gire-icone {
+  width: 46px; height: 78px; border: 4px solid #fff; border-radius: 12px;
+  animation: gira 2.4s ease-in-out infinite;
+}
+.gire-icone.para-vertical { animation-name: desgira; }
+@keyframes gira { 0%, 20% { transform: rotate(0); } 55%, 100% { transform: rotate(-90deg); } }
+@keyframes desgira { 0%, 20% { transform: rotate(-90deg); } 55%, 100% { transform: rotate(0); } }
+
+/* câmera deitada: controles numa coluna do lado oposto à câmera */
+.deitado .prompter { height: 50%; }
+.deitado .prompter.pos-meio { top: 25%; left: calc(16% + var(--esq)); right: calc(166px + var(--dir)); }
+.deitado .prompter.pos-topo { top: calc(58px + var(--topo)); left: calc(12px + var(--esq)); right: 46%; }
+.deitado .top-bar { right: 150px; }
+.deitado .controls {
+  left: auto; right: 0; top: 0; bottom: 0; width: calc(150px + var(--dir));
+  padding: 14px calc(12px + var(--dir)) 14px 12px; align-content: center; justify-items: center;
+  background: linear-gradient(90deg, transparent, rgba(0,0,0,.72) 40%);
+}
+.deitado .hint { display: none; }
+.deitado .controls-row { grid-template-columns: 1fr; justify-items: center; gap: 18px; }
+.deitado .speed, .deitado .side-btn { justify-self: center; }
+.deitado .countdown { font-size: 120px; }
+.deitado .faixa-giro { top: calc(64px + var(--topo)); }
+.deitado.camera-direita .prompter.pos-meio { left: calc(166px + var(--esq)); right: calc(16% + var(--dir)); }
+.deitado.camera-direita .prompter.pos-topo { left: 46%; right: calc(12px + var(--dir)); }
+.deitado.camera-direita .top-bar { right: 0; left: 150px; }
+.deitado.camera-direita .controls {
+  right: auto; left: 0; width: calc(150px + var(--esq));
+  padding: 14px 12px 14px calc(12px + var(--esq));
+  background: linear-gradient(270deg, transparent, rgba(0,0,0,.72) 40%);
+}
+
+/* ---------- tela 3: pronto ---------- */
+.done {
+  display: grid; gap: 14px;
+  grid-template-areas: "titulo" "video" "lado";
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  background: var(--panel);
+  padding: calc(18px + var(--topo)) calc(18px + var(--dir)) calc(20px + var(--base)) calc(18px + var(--esq));
+}
+.done h1 { grid-area: titulo; }
+.preview-wrap { grid-area: video; min-height: 0; display: flex; justify-content: center; align-items: center; }
+.video-pronto {
+  display: block; max-width: 100%; max-height: 100%; width: auto; height: auto;
+  border-radius: 20px; background: #000;
+}
+.done-side { grid-area: lado; display: grid; gap: 14px; align-content: start; }
+.deitado .done {
+  grid-template-areas: "video titulo" "video lado";
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
+  column-gap: 20px;
+}
+.deitado .done-side { overflow-y: auto; }
+.caption { margin: 0; text-align: center; color: var(--muted); font-size: 15px; line-height: 1.45; text-wrap: balance; }
+.caption .num { color: var(--text); font-weight: 600; }
+.deitado .caption { text-align: left; }
+.row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.toast {
+  margin: 0; padding: 12px 14px; border-radius: 14px;
+  background: color-mix(in srgb, var(--cue) 16%, var(--panel));
+  border: 1px solid color-mix(in srgb, var(--cue) 45%, transparent);
+  font-size: 14px; line-height: 1.45;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dot, .gire-icone, .countdown.pop { animation: none; }
+  .prompter { transition: none; }
+}

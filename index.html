@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Teleprompter de Bolso</title>
+<meta name="description" content="Grave vídeos com a câmera da frente lendo seu texto na tela. O texto não aparece no vídeo.">
+<meta name="theme-color" content="#0e0f12">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Teleprompter">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icones/icone-180.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icones/icone-192.png">
+<link rel="preload" href="fontes/atkinson-hyperlegible-700.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="estilo.css">
+<script type="module" src="js/app.js"></script>
+</head>
+<body>
+<div class="phone" id="celular">
+
+  <!-- TELA 1: TEXTO -->
+  <section id="tela-texto" class="screen setup" aria-label="Seu texto">
+    <header>
+      <h1>Seu texto</h1>
+      <p class="sub">Cole ou escreva o que você vai falar. Ele passa na tela enquanto você grava.</p>
+    </header>
+
+    <div id="dica-instalar" class="dica-instalar" hidden>
+      <p>Para usar como app: toque em <strong>Compartilhar</strong> <span class="icone-compartilhar" aria-hidden="true"></span> e depois em <strong>“Adicionar à Tela de Início”</strong>.</p>
+      <button type="button" id="fechar-dica" class="link-btn">Entendi</button>
+    </div>
+
+    <label for="roteiro" class="sr">Texto do vídeo</label>
+    <textarea id="roteiro" spellcheck="true" placeholder="Escreva aqui o que você vai falar…"></textarea>
+
+    <div class="settings">
+      <fieldset class="field">
+        <legend>Formato do vídeo</legend>
+        <div class="seg">
+          <button type="button" id="fmt-vertical" data-formato="vertical" aria-pressed="true"><span class="forma v" aria-hidden="true"></span>Vertical</button>
+          <button type="button" id="fmt-horizontal" data-formato="horizontal" aria-pressed="false"><span class="forma h" aria-hidden="true"></span>Horizontal</button>
+        </div>
+        <p class="note" id="nota-formato"></p>
+      </fieldset>
+      <div class="field">
+        <div class="field-top"><label for="vel">Velocidade do texto</label><output id="vel-out" for="vel"></output></div>
+        <input type="range" id="vel" min="1" max="10" step="1" value="4">
+      </div>
+      <div class="field">
+        <div class="field-top"><label for="tam">Tamanho da letra</label><output id="tam-out" for="tam"></output></div>
+        <input type="range" id="tam" min="22" max="48" step="2" value="32">
+      </div>
+      <fieldset class="field">
+        <legend>Onde o texto aparece</legend>
+        <div class="seg">
+          <button type="button" id="pos-meio" data-pos="meio" aria-pressed="true">No meio</button>
+          <button type="button" id="pos-topo" data-pos="topo" aria-pressed="false">Perto da câmera</button>
+        </div>
+        <p class="note" id="nota-pos"></p>
+      </fieldset>
+    </div>
+    <button type="button" id="abrir" class="primary">Abrir câmera</button>
+  </section>
+
+  <!-- TELA 2: CÂMERA -->
+  <section id="tela-camera" class="screen camera" aria-label="Câmera" hidden>
+    <video id="previa" class="previa" playsinline muted autoplay></video>
+    <p id="carregando" class="carregando">Ligando a câmera…</p>
+
+    <div class="top-bar">
+      <button type="button" id="voltar" class="chip">‹ Texto</button>
+      <div id="cronometro" class="timer" hidden><span class="dot"></span><span id="tempo">00:00</span></div>
+      <button type="button" id="trocar-pos" class="chip"></button>
+    </div>
+
+    <p id="faixa-giro" class="faixa-giro" role="status" hidden></p>
+
+    <div id="prompter" class="prompter pos-meio" aria-label="Texto do teleprompter. Toque para pausar.">
+      <div class="cue-mark" aria-hidden="true"></div>
+      <div class="scroller"><div id="texto-rolando" class="rolling"></div></div>
+    </div>
+
+    <div id="contagem" class="countdown" hidden>3</div>
+
+    <div class="controls">
+      <p id="dica" class="hint">Só você aparece no vídeo. O texto fica só na sua tela.</p>
+      <div class="controls-row">
+        <div class="speed">
+          <button type="button" id="mais-devagar" aria-label="Texto mais devagar">−</button>
+          <span id="vel-cam"></span>
+          <button type="button" id="mais-rapido" aria-label="Texto mais rápido">+</button>
+        </div>
+        <button type="button" id="gravar" class="rec" aria-label="Começar a gravar" disabled><span></span></button>
+        <button type="button" id="pausar" class="chip side-btn">Rolar texto</button>
+      </div>
+    </div>
+
+    <div id="gire" class="cobertura" hidden>
+      <div class="gire-icone" aria-hidden="true"></div>
+      <p class="cobertura-titulo" id="gire-titulo">Gire o celular</p>
+      <p class="cobertura-sub" id="gire-sub"></p>
+    </div>
+
+    <div id="aviso-erro" class="cobertura" role="alert" hidden>
+      <p class="cobertura-titulo" id="erro-titulo">Não consegui ligar a câmera</p>
+      <p class="cobertura-sub" id="erro-texto"></p>
+      <div class="cobertura-botoes">
+        <button type="button" id="tentar-de-novo" class="primary">Tentar de novo</button>
+        <button type="button" id="erro-voltar" class="secondary">Voltar ao texto</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- TELA 3: PRONTO -->
+  <section id="tela-pronto" class="screen done" aria-label="Vídeo pronto" hidden>
+    <h1>Vídeo pronto</h1>
+    <div class="preview-wrap">
+      <video id="video-pronto" class="video-pronto" playsinline controls preload="metadata"></video>
+    </div>
+    <div class="done-side">
+      <p class="caption">Duração <span id="duracao" class="num">00:00</span> · só você, sem o texto por cima.</p>
+      <button type="button" id="salvar" class="primary">Salvar nas Fotos</button>
+      <p id="aviso" class="toast" role="status" hidden></p>
+      <div class="row">
+        <button type="button" id="de-novo" class="secondary">Gravar de novo</button>
+        <button type="button" id="editar" class="secondary">Editar texto</button>
+      </div>
+    </div>
+  </section>
+</div>
+</body>
+</html>

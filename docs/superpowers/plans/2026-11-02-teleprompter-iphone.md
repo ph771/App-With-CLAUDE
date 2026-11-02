@@ -99,3 +99,17 @@ Testes (Chromium com `--use-fake-device-for-media-stream`):
 - Teste: `manifest e service worker carregam` (e2e) — manifest com `display: standalone` e SW registrado.
 
 - [ ] Step 1: teste falhando. Step 2: implementar. Step 3: rodar todos os testes. Step 4: commit e push.
+
+---
+
+## Registro de execução (2026-11-02)
+
+Todas as tarefas concluídas; `npm test`: 28 testes passando (19 de lógica, 9 de ponta a ponta).
+
+- Ruling: velocidade medida em palavras por minuto (`palavrasPorMinuto(v) = 60 + 20v`, Média = 140) em vez de `(10 + 7v) × tamanho/32` px/s — a fórmula antiga dava ~190 palavras/min em pé e quase o dobro deitado — se errado, o dono só ajusta o controle.
+- Ruling: prévia da câmera com `object-fit: contain` — o que aparece na tela é exatamente o enquadramento gravado — custo: faixas pretas quando a proporção da tela difere da do vídeo.
+- Ruling: toque no texto travado durante a contagem 3-2-1 — evita o texto começar antes da gravação — teste dedicado.
+- Ruling: "Gravar de novo"/"Editar texto" pedem confirmação se o vídeo ainda não foi salvo — evita perder uma gravação sem querer.
+- Ruling: arrastar o texto com o dedo para voltar/avançar — ajuda quando a pessoa se perde na leitura — custo pequeno, mesmo gesto do toque.
+- Ruling: fontes copiadas para `fontes/` (licença OFL incluída) — o app funciona sem internet.
+- Não testado aqui: Safari do iPhone real (câmera, MP4, "Salvar Vídeo", giro). Testado no Chromium com câmera falsa; o dono testa no iPhone.

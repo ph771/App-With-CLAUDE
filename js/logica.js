@@ -14,10 +14,21 @@ export function nomeVelocidade(v) {
   return 'Rápida';
 }
 
-// Quantos pixels o texto sobe por segundo. Letra maior anda proporcionalmente
-// mais rápido, para que o ritmo de leitura (linhas por segundo) fique parecido.
-export function pixelsPorSegundo(velocidade, tamanhoLetra) {
-  return (10 + velocidade * 7) * (tamanhoLetra / 32);
+// Velocidade de 1 a 10 em palavras por minuto. Média (4) = 140, ritmo de fala normal.
+export function palavrasPorMinuto(velocidade) {
+  return 60 + velocidade * 20;
+}
+
+export function contarPalavras(texto) {
+  const t = String(texto || '').trim();
+  return t ? t.split(/\s+/).length : 0;
+}
+
+// Quantos pixels o texto sobe por segundo para manter as palavras por minuto,
+// seja com letra grande ou pequena, com o celular em pé ou deitado.
+export function pixelsPorSegundo(velocidade, alturaDoTexto, palavras) {
+  if (!(alturaDoTexto > 0) || !(palavras > 0)) return 30;
+  return (palavrasPorMinuto(velocidade) / 60) * (alturaDoTexto / palavras);
 }
 
 const FORMATOS_GRAVACAO = [

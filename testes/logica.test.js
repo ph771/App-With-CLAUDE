@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import {
   formatarTempo,
   nomeVelocidade,
+  palavrasPorMinuto,
+  contarPalavras,
   pixelsPorSegundo,
   escolherFormatoGravacao,
   restricoesCamera,
@@ -38,12 +40,30 @@ test('nomeVelocidade agrupa 1-3, 4-6 e 7-10', () => {
   assert.equal(nomeVelocidade(10), 'Rápida');
 });
 
-test('pixelsPorSegundo cresce com a velocidade e acompanha o tamanho da letra', () => {
-  assert.equal(pixelsPorSegundo(4, 32), 38);
-  assert.equal(pixelsPorSegundo(1, 32), 17);
-  assert.equal(pixelsPorSegundo(10, 32), 80);
-  assert.equal(pixelsPorSegundo(4, 64), 76);
-  assert.ok(pixelsPorSegundo(5, 32) > pixelsPorSegundo(4, 32));
+test('palavrasPorMinuto vai de 80 a 260; Média (4) é 140, ritmo de fala normal', () => {
+  assert.equal(palavrasPorMinuto(1), 80);
+  assert.equal(palavrasPorMinuto(4), 140);
+  assert.equal(palavrasPorMinuto(10), 260);
+});
+
+test('contarPalavras ignora espaços e linhas em branco', () => {
+  assert.equal(contarPalavras('Oi!  Tudo bem?\n\nSim.'), 4);
+  assert.equal(contarPalavras('   '), 0);
+  assert.equal(contarPalavras(''), 0);
+});
+
+test('pixelsPorSegundo mantém as palavras por minuto, seja qual for o tamanho do texto na tela', () => {
+  // 120 palavras ocupando 1200 px → 10 px por palavra; 140 palavras/min → 2,333 palavras/s → 23,33 px/s
+  assert.ok(Math.abs(pixelsPorSegundo(4, 1200, 120) - 23.333) < 0.01);
+  // Letra maior ou tela em pé (texto mais alto) → anda mais pixels, mesmas palavras por minuto
+  assert.ok(Math.abs(pixelsPorSegundo(4, 2400, 120) - 46.667) < 0.01);
+  assert.ok(pixelsPorSegundo(5, 1200, 120) > pixelsPorSegundo(4, 1200, 120));
+});
+
+test('pixelsPorSegundo tem um valor seguro quando não dá para medir', () => {
+  assert.equal(pixelsPorSegundo(4, 0, 0), 30);
+  assert.equal(pixelsPorSegundo(4, 500, 0), 30);
+  assert.equal(pixelsPorSegundo(4, NaN, 10), 30);
 });
 
 test('escolherFormatoGravacao prefere MP4 (Safari do iPhone)', () => {

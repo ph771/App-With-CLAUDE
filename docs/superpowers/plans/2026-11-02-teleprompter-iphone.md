@@ -113,3 +113,12 @@ Todas as tarefas concluídas; `npm test`: 28 testes passando (19 de lógica, 9 d
 - Ruling: arrastar o texto com o dedo para voltar/avançar — ajuda quando a pessoa se perde na leitura — custo pequeno, mesmo gesto do toque.
 - Ruling: fontes copiadas para `fontes/` (licença OFL incluída) — o app funciona sem internet.
 - Não testado aqui: Safari do iPhone real (câmera, MP4, "Salvar Vídeo", giro). Testado no Chromium com câmera falsa; o dono testa no iPhone.
+
+## Registro: transmitir para o OBS (2026-11-02)
+
+`npm test`: 40 testes passando (inclui 4 de ponta a ponta da transmissão, com servidor de conexão local).
+
+- Ruling: durante a transmissão com o texto rodando, o botão "Texto: no meio/perto da câmera" some para caber "Ao vivo" + cronômetro — a posição continua mudando na primeira tela.
+- Ruling: `?sinal=` (servidor de conexão de teste) só vale quando o app roda em localhost — um link de fora não consegue desviar a câmera para outro servidor.
+- Ruling: código do OBS guardado na página e fixável no endereço (`?codigo=`) — configurar o OBS uma vez só.
+- Não testado aqui: Safari do iPhone real e o OBS de verdade (o serviço público do PeerJS é bloqueado nesta máquina).

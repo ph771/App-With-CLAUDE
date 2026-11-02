@@ -33,6 +33,27 @@ primeira vez, ele abre até sem internet.
 Tudo fica no seu iPhone. Nenhum vídeo ou texto é enviado para a internet. O texto e os
 ajustes ficam guardados para a próxima vez.
 
+## Transmitir ao vivo para o OBS
+
+Em vez de gravar no iPhone, você pode mandar a câmera ao vivo para o OBS no computador,
+continuando a ver o texto no celular. **O OBS recebe só você, sem o texto.**
+
+1. No computador, abra **https://ph771.github.io/App-With-CLAUDE/obs/** — aparece um
+   **código de 4 números** e um QR code.
+2. No OBS (uma vez só): **Fontes › + › Navegador**, cole o endereço que a página mostra
+   (ele termina com `?codigo=` e o seu código), largura 1920 e altura 1080 (vertical:
+   1080 × 1920) e marque **Controlar áudio via OBS**.
+3. No iPhone: aponte a câmera para o QR code, ou abra o app, escolha **Transmitir para o
+   OBS** e digite o código. Toque em **Abrir câmera e conectar**.
+4. Quando aparecer **● Ao vivo**, a imagem já está no OBS. O botão vermelho só começa o
+   texto (contagem 3-2-1 e rolagem); quem grava é o OBS.
+
+- Deixe o Safari aberto e a tela acesa durante a transmissão.
+- Se cair ou se o OBS abrir depois, o iPhone reconecta sozinho.
+- Quer NDI? Instale no OBS o complemento gratuito **DistroAV**.
+- Para os aparelhos se acharem, o app usa o serviço gratuito do PeerJS; o vídeo vai
+  direto do iPhone para o computador.
+
 ## Dicas
 
 - **Perto da câmera** faz parecer que você olha para quem assiste.
@@ -62,12 +83,15 @@ partir da raiz do ramo `claude/exciting-volta-93dlxv`.
 | `js/gravador.js` | Liga a câmera e grava só câmera + microfone |
 | `js/logica.js` | Contas puras (tempo, velocidade, formatos), com testes |
 | `sw.js`, `manifest.webmanifest`, `icones/` | App instalável e uso sem internet |
+| `obs/`, `js/transmissor.js`, `js/conexao.js` | Transmissão ao vivo para o OBS |
+| `vendor/` | PeerJS e gerador de QR code (licença MIT) |
 | `exemplo/` | A tela de exemplo aprovada antes da construção |
 | `docs/superpowers/` | Projeto e plano de implementação |
 
 ```bash
+npm install       # só para os testes (servidor de conexão local)
 npm test          # testes (os de ponta a ponta usam Playwright com câmera falsa)
 npm run servidor  # abre o app em http://localhost:8080
 ```
 
-Ao mudar a lista de arquivos do app, aumente a versão em `sw.js` (`teleprompter-v2`).
+Ao mudar a lista de arquivos do app, aumente a versão em `sw.js` (`teleprompter-v3`).

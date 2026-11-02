@@ -1,5 +1,6 @@
 // Funções puras do app: sem acesso à tela, à câmera ou ao navegador.
 // Testadas em testes/logica.test.js.
+import { codigoValido } from './conexao.js';
 
 export function formatarTempo(segundos) {
   const s = Number.isFinite(segundos) && segundos > 0 ? Math.floor(segundos) : 0;
@@ -98,6 +99,8 @@ export const PADROES = Object.freeze({
   velocidade: 4,
   tamanho: 32,
   espaco: 'grande', // quanto da tela a faixa do texto ocupa: pequeno | medio | grande
+  modo: 'gravar', // gravar (no iPhone) | transmitir (para o OBS)
+  codigo: '', // código de 4 dígitos da página do OBS
 });
 
 export const ESPACOS = Object.freeze(['pequeno', 'medio', 'grande']);
@@ -129,6 +132,8 @@ export function carregarPreferencias(armazenamento) {
     velocidade: noIntervalo(salvo.velocidade, LIMITES.velocidade) ? salvo.velocidade : PADROES.velocidade,
     tamanho: noIntervalo(salvo.tamanho, LIMITES.tamanho) ? salvo.tamanho : PADROES.tamanho,
     espaco: ESPACOS.includes(salvo.espaco) ? salvo.espaco : PADROES.espaco,
+    modo: salvo.modo === 'gravar' || salvo.modo === 'transmitir' ? salvo.modo : PADROES.modo,
+    codigo: codigoValido(salvo.codigo) ? salvo.codigo : PADROES.codigo,
   };
 }
 

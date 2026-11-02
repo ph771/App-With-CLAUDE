@@ -103,3 +103,20 @@ pelo WhatsApp (copiar e colar); nada muda nisso.
 - A faixa nunca cobre os botões (gravar, velocidade, rolar, voltar) — conferido por teste
   no iPhone SE (o menor), num iPhone comum e nos dois deitados.
 - Quem já usava o app ganha o espaço Grande; os outros ajustes ficam como estavam.
+
+## Mudança: transmitir para o OBS (2026-11-02)
+
+Pedido do dono: além de gravar no iPhone, poder mandar a câmera ao vivo para o **OBS**,
+continuando a ver o teleprompter no celular. Aprovado na conversa ("pode fazer assim").
+
+- NDI direto do Safari é impossível (exige programa nativo). Caminho escolhido: WebRTC do
+  iPhone para uma página do app no computador (`/obs/`), que entra no OBS como
+  **Fonte de Navegador**. Quem quiser NDI converte no OBS com o complemento DistroAV.
+- Primeira tela: **Gravar no iPhone** | **Transmitir para o OBS**.
+- Pareamento: a página `/obs/` mostra um **código de 4 dígitos** e um **QR code**; o código
+  fica guardado (ou fixo no endereço `?codigo=1234`), então o OBS é configurado uma vez só.
+- No modo transmitir: a imagem vai para o OBS assim que a câmera abre; o botão vermelho
+  só controla o texto (contagem 3-2-1, rolagem, cronômetro). O iPhone não grava junto.
+- Som do microfone vai junto. Reconexão automática se cair ou se o OBS abrir depois.
+- Conexão: serviço gratuito do PeerJS só para os aparelhos se acharem; o vídeo vai direto
+  (peer-to-peer). Bibliotecas copiadas em `vendor/` (MIT).

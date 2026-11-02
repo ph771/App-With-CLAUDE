@@ -15,6 +15,7 @@
 <link rel="icon" type="image/png" sizes="192x192" href="icones/icone-192.png">
 <link rel="preload" href="fontes/atkinson-hyperlegible-700.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="estilo.css">
+<script src="vendor/peerjs.min.js" defer></script>
 <script type="module" src="js/app.js"></script>
 </head>
 <body>
@@ -31,6 +32,19 @@
       <p>Para usar como app: toque em <strong>Compartilhar</strong> <span class="icone-compartilhar" aria-hidden="true"></span> e depois em <strong>“Adicionar à Tela de Início”</strong>.</p>
       <button type="button" id="fechar-dica" class="link-btn">Entendi</button>
     </div>
+
+    <fieldset class="field">
+      <legend>O que você quer fazer?</legend>
+      <div class="seg">
+        <button type="button" id="modo-gravar" data-modo="gravar" aria-pressed="true">Gravar no iPhone</button>
+        <button type="button" id="modo-transmitir" data-modo="transmitir" aria-pressed="false">Transmitir para o OBS</button>
+      </div>
+      <div id="campo-codigo" class="campo-codigo" hidden>
+        <label for="codigo-obs">Código do OBS</label>
+        <input id="codigo-obs" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" placeholder="0000">
+      </div>
+      <p class="note" id="nota-codigo" hidden></p>
+    </fieldset>
 
     <label for="roteiro" class="sr">Texto do vídeo</label>
     <textarea id="roteiro" spellcheck="true" placeholder="Escreva aqui o que você vai falar…"></textarea>
@@ -79,6 +93,7 @@
 
     <div class="top-bar">
       <button type="button" id="voltar" class="chip">‹ Texto</button>
+      <p id="status-obs" class="status-obs" role="status" hidden></p>
       <div id="cronometro" class="timer" hidden><span class="dot"></span><span id="tempo">00:00</span></div>
       <button type="button" id="trocar-pos" class="chip"></button>
     </div>

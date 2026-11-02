@@ -143,12 +143,14 @@ test('carregarPreferencias devolve os padrões quando não há nada salvo', () =
   assert.equal(PADROES.velocidade, 4);
   assert.equal(PADROES.tamanho, 32);
   assert.equal(PADROES.espaco, 'grande');
+  assert.equal(PADROES.modo, 'gravar');
+  assert.equal(PADROES.codigo, '');
   assert.ok(PADROES.texto.length > 0);
 });
 
 test('salvarPreferencias e carregarPreferencias guardam o texto e os ajustes', () => {
   const a = armazenamentoFalso();
-  const prefs = { texto: 'Olá, mundo', formato: 'horizontal', posicao: 'topo', velocidade: 7, tamanho: 40, espaco: 'pequeno' };
+  const prefs = { texto: 'Olá, mundo', formato: 'horizontal', posicao: 'topo', velocidade: 7, tamanho: 40, espaco: 'pequeno', modo: 'transmitir', codigo: '4821' };
   salvarPreferencias(a, prefs);
   assert.deepEqual(carregarPreferencias(a), prefs);
 });
@@ -157,7 +159,7 @@ test('preferências salvas antes de existir o espaço do texto ganham o espaço 
   const a = armazenamentoFalso({
     'teleprompter:prefs': JSON.stringify({ texto: 'Antigo', formato: 'vertical', posicao: 'meio', velocidade: 5, tamanho: 30 }),
   });
-  assert.deepEqual(carregarPreferencias(a), { texto: 'Antigo', formato: 'vertical', posicao: 'meio', velocidade: 5, tamanho: 30, espaco: 'grande' });
+  assert.deepEqual(carregarPreferencias(a), { texto: 'Antigo', formato: 'vertical', posicao: 'meio', velocidade: 5, tamanho: 30, espaco: 'grande', modo: 'gravar', codigo: '' });
 });
 
 test('carregarPreferencias guarda texto vazio (a pessoa apagou de propósito)', () => {
@@ -168,7 +170,7 @@ test('carregarPreferencias guarda texto vazio (a pessoa apagou de propósito)', 
 
 test('carregarPreferencias corrige valores fora da faixa', () => {
   const a = armazenamentoFalso({
-    'teleprompter:prefs': JSON.stringify({ texto: 5, formato: 'diagonal', posicao: 'x', velocidade: 99, tamanho: 3, espaco: 'enorme' }),
+    'teleprompter:prefs': JSON.stringify({ texto: 5, formato: 'diagonal', posicao: 'x', velocidade: 99, tamanho: 3, espaco: 'enorme', modo: 'voar', codigo: '12' }),
   });
   assert.deepEqual(carregarPreferencias(a), PADROES);
 });

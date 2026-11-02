@@ -338,3 +338,23 @@ input[type="range"] { width: 100%; accent-color: var(--cue); margin: 0; height: 
   .dot, .gire-icone, .countdown.pop { animation: none; }
   .prompter { transition: none; }
 }
+
+/* ---------- transmitir para o OBS ---------- */
+.campo-codigo { display: flex; align-items: center; gap: 12px; margin-top: 10px; }
+.campo-codigo label { font-size: 15px; font-weight: 600; }
+.campo-codigo input {
+  width: 7.5ch; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--field);
+  font-size: 22px; font-weight: 700; letter-spacing: .18em; text-align: center; font-variant-numeric: tabular-nums;
+}
+.note.erro { color: var(--cue); font-weight: 600; }
+.status-obs {
+  margin: 0; display: inline-flex; align-items: center; gap: 7px; padding: 6px 11px; border-radius: 999px;
+  background: rgba(0,0,0,.55); color: #fff; font-size: 14px; font-weight: 700; white-space: nowrap;
+  -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+}
+.status-obs::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+.status-obs.ao-vivo::before { background: #34c759; }
+.status-obs.esperando::before { background: var(--cue); animation: pisca 1s steps(2) infinite; }
+.transmitindo .top-bar { justify-content: flex-start; }
+.transmitindo #trocar-pos { margin-left: auto; }
+.transmitindo.rodando #trocar-pos { display: none; }

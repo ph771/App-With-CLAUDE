@@ -4,7 +4,10 @@
   "type": "module",
   "description": "App para iPhone que grava a câmera da frente com um teleprompter visível só na tela.",
   "scripts": {
-    "test": "node --test \"testes/*.test.js\"",
+    "test": "node --test --test-force-exit \"testes/*.test.js\"",
     "servidor": "node testes/servidor.js"
+  },
+  "devDependencies": {
+    "peer": "1.0.2"
   }
 }

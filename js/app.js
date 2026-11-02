@@ -5,6 +5,8 @@ import {
 } from './logica.js';
 import { Prompter } from './prompter.js';
 import { abrirCamera, fecharCamera, Gravador, ErroCamera, formatoDeGravacaoDisponivel } from './gravador.js';
+import { Transmissor } from './transmissor.js';
+import { codigoValido, opcoesDoSinal } from './conexao.js';
 
 const $ = (s) => document.querySelector(s);
 const celular = $('#celular');
@@ -23,6 +25,17 @@ function armazenamento() {
 let prefs = carregarPreferencias(armazenamento());
 function guardar() { salvarPreferencias(armazenamento(), prefs); }
 
+// O QR code da página do OBS abre o app com ?conectar=1234: já entra no modo transmitir.
+(() => {
+  const u = new URL(location.href);
+  const c = u.searchParams.get('conectar');
+  if (c === null) return;
+  if (codigoValido(c)) { prefs.modo = 'transmitir'; prefs.codigo = c; guardar(); }
+  u.searchParams.delete('conectar');
+  history.replaceState(null, '', u.pathname + u.search + u.hash);
+})();
+const transmitindo = () => prefs.modo === 'transmitir';
+
 let telaAtual = 'texto';
 let stream = null;
 let gravador = null;
@@ -36,6 +49,7 @@ let arquivo = null;
 let urlVideo = null;
 let videoSalvo = true;
 let pedidoCamera = 0;
+let transmissor = null;
 
 const prompter = new Prompter($('#prompter'), $('#texto-rolando'), {
   velocidade: (p) => pixelsPorSegundo(prefs.velocidade, p.alturaDoTexto(), p.palavras),
@@ -62,7 +76,24 @@ const DICAS_POSICAO = {
   meio: 'No meio, seus olhos ficam longe da câmera.',
   topo: 'Perto da câmera, parece que você olha para quem assiste.',
 };
-const DICA_PADRAO = 'Só você aparece no vídeo. O texto fica só na sua tela.';
+const DICA_GRAVAR = 'Só você aparece no vídeo. O texto fica só na sua tela.';
+const DICA_TRANSMITIR = 'A imagem vai para o OBS sem o texto. O botão vermelho só começa o texto.';
+const dicaPadrao = () => (transmitindo() ? DICA_TRANSMITIR : DICA_GRAVAR);
+const rotuloComecar = () => (transmitindo() ? 'Começar o texto' : 'Começar a gravar');
+
+function aplicarModo() {
+  const t = transmitindo();
+  document.querySelectorAll('[data-modo]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.modo === prefs.modo)));
+  $('#campo-codigo').hidden = !t;
+  $('#codigo-obs').value = prefs.codigo;
+  const nota = $('#nota-codigo');
+  nota.hidden = !t;
+  nota.classList.remove('erro');
+  nota.textContent = 'No computador, abra ph771.github.io/App-With-CLAUDE/obs para ver o código.';
+  $('#abrir').textContent = t ? 'Abrir câmera e conectar' : 'Abrir câmera';
+  botaoGravar.setAttribute('aria-label', rotuloComecar());
+  celular.classList.toggle('transmitindo', t);
+}
 
 function aplicarFormato() {
   document.querySelectorAll('[data-formato]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.formato === prefs.formato)));
@@ -105,7 +136,7 @@ function mostrarDica(texto) {
   if (telaAtual !== 'camera' || gravando || contando) return;
   $('#dica').textContent = texto;
   clearTimeout(idDica);
-  idDica = setTimeout(() => { $('#dica').textContent = DICA_PADRAO; }, 4000);
+  idDica = setTimeout(() => { $('#dica').textContent = dicaPadrao(); }, 4000);
 }
 
 // ---------- orientação ----------
@@ -163,7 +194,7 @@ async function ligarCamera() {
   $('#carregando').hidden = false;
   botaoGravar.disabled = true;
   desligarCamera();
-  if (!formatoDeGravacaoDisponivel()) { mostrarErro('sem-gravacao'); return; }
+  if (!transmitindo() && !formatoDeGravacaoDisponivel()) { mostrarErro('sem-gravacao'); return; }
   try {
     const s = await abrirCamera(prefs.formato);
     if (meuPedido !== pedidoCamera || telaAtual !== 'camera') { fecharCamera(s); return; }
@@ -174,13 +205,41 @@ async function ligarCamera() {
     $('#carregando').hidden = true;
     botaoGravar.disabled = false;
     manterTelaAcesa();
+    if (transmitindo()) iniciarTransmissao();
   } catch (e) {
     if (meuPedido !== pedidoCamera) return;
     mostrarErro(e instanceof ErroCamera ? e.codigo : 'outro');
   }
 }
 
+// ---------- transmissão para o OBS ----------
+const TEXTOS_STATUS = { conectando: 'Conectando…', esperando: 'Esperando o OBS', 'ao-vivo': 'Ao vivo', parado: '' };
+
+function mostrarStatusObs(estado) {
+  const el = $('#status-obs');
+  el.className = 'status-obs ' + estado;
+  el.textContent = TEXTOS_STATUS[estado] || '';
+  el.hidden = estado === 'parado';
+}
+
+function iniciarTransmissao() {
+  pararTransmissao();
+  transmissor = new Transmissor({
+    stream,
+    codigo: prefs.codigo,
+    opcoes: opcoesDoSinal(new URL(location.href)),
+    aoMudar: mostrarStatusObs,
+  });
+  transmissor.iniciar();
+}
+
+function pararTransmissao() {
+  if (transmissor) { transmissor.parar(); transmissor = null; }
+  $('#status-obs').hidden = true;
+}
+
 function desligarCamera() {
+  pararTransmissao();
   if (stream) {
     fecharCamera(stream);
     stream = null;
@@ -205,9 +264,22 @@ function soltarTela() {
 }
 
 function abrirTelaCamera() {
+  if (transmitindo()) {
+    const c = $('#codigo-obs').value;
+    if (!codigoValido(c)) {
+      const nota = $('#nota-codigo');
+      nota.textContent = 'Digite os 4 números que aparecem na página do OBS no computador.';
+      nota.classList.add('erro');
+      nota.hidden = false;
+      $('#codigo-obs').focus();
+      return;
+    }
+    prefs.codigo = c;
+    guardar();
+  }
   prompter.pausar();
   mostrar('camera');
-  $('#dica').textContent = DICA_PADRAO;
+  $('#dica').textContent = dicaPadrao();
   $('#dica').hidden = false;
   requestAnimationFrame(() => prompter.definirTexto(prefs.texto));
   ligarCamera();
@@ -264,21 +336,24 @@ function cancelarContagem() {
 
 function iniciarGravacao() {
   if (!stream) { $('#voltar').disabled = false; $('#dica').hidden = false; return; }
-  gravador = new Gravador(stream, formatoDeGravacaoDisponivel());
-  try {
-    gravador.iniciar();
-  } catch (e) {
-    gravador = null;
-    $('#voltar').disabled = false;
-    mostrarErro(e instanceof ErroCamera ? e.codigo : 'sem-gravacao');
-    return;
+  if (!transmitindo()) {
+    gravador = new Gravador(stream, formatoDeGravacaoDisponivel());
+    try {
+      gravador.iniciar();
+    } catch (e) {
+      gravador = null;
+      $('#voltar').disabled = false;
+      mostrarErro(e instanceof ErroCamera ? e.codigo : 'sem-gravacao');
+      return;
+    }
   }
   gravando = true;
+  celular.classList.add('rodando');
   inicioGravacao = Date.now();
   $('#tempo').textContent = '00:00';
   $('#cronometro').hidden = false;
   botaoGravar.classList.add('on');
-  botaoGravar.setAttribute('aria-label', 'Parar de gravar');
+  botaoGravar.setAttribute('aria-label', transmitindo() ? 'Parar o texto' : 'Parar de gravar');
   idCronometro = setInterval(() => {
     $('#tempo').textContent = formatarTempo((Date.now() - inicioGravacao) / 1000);
   }, 250);
@@ -287,17 +362,19 @@ function iniciarGravacao() {
 }
 
 async function pararGravacao() {
-  if (!gravando || !gravador) return;
+  if (!gravando) return;
   gravando = false;
+  celular.classList.remove('rodando');
   const segundos = (Date.now() - inicioGravacao) / 1000;
   clearInterval(idCronometro);
   prompter.pausar();
   $('#cronometro').hidden = true;
   botaoGravar.classList.remove('on');
-  botaoGravar.setAttribute('aria-label', 'Começar a gravar');
-  botaoGravar.disabled = true;
+  botaoGravar.setAttribute('aria-label', rotuloComecar());
   $('#voltar').disabled = false;
   $('#dica').hidden = false;
+  if (!gravador) { atualizarOrientacao(); return; } // transmitindo: só o texto parou, o OBS continua recebendo
+  botaoGravar.disabled = true;
   let blob;
   try {
     blob = await gravador.parar();
@@ -401,6 +478,14 @@ $('#mais-rapido').addEventListener('click', () => { prefs.velocidade = Math.min(
 $('#pausar').addEventListener('click', () => { if (!contando) prompter.alternar(); });
 
 $('#abrir').addEventListener('click', abrirTelaCamera);
+document.querySelectorAll('[data-modo]').forEach((b) => b.addEventListener('click', () => {
+  prefs.modo = b.dataset.modo; aplicarModo(); guardar();
+}));
+$('#codigo-obs').addEventListener('input', (e) => {
+  const limpo = e.target.value.replace(/\D/g, '').slice(0, 4);
+  if (limpo !== e.target.value) e.target.value = limpo;
+  if (codigoValido(limpo)) { prefs.codigo = limpo; guardar(); $('#nota-codigo').classList.remove('erro'); }
+});
 $('#voltar').addEventListener('click', voltarAoTexto);
 $('#erro-voltar').addEventListener('click', voltarAoTexto);
 $('#tentar-de-novo').addEventListener('click', ligarCamera);
@@ -442,6 +527,7 @@ window.addEventListener('pagehide', () => { desligarCamera(); });
 
 // ---------- início ----------
 roteiro.value = prefs.texto;
+aplicarModo();
 aplicarFormato();
 aplicarPosicao();
 aplicarEspaco();

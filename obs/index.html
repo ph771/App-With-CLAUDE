@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Teleprompter de Bolso · OBS</title>
+<meta name="theme-color" content="#0e0f12">
+<link rel="icon" type="image/png" sizes="192x192" href="../icones/icone-192.png">
+<link rel="stylesheet" href="obs.css">
+<script src="../vendor/peerjs.min.js" defer></script>
+<script src="../vendor/qrcode.js" defer></script>
+<script type="module" src="obs.js"></script>
+</head>
+<body>
+<video id="video" playsinline autoplay></video>
+
+<main id="painel" class="painel" hidden>
+  <p class="marca">Teleprompter de Bolso · OBS</p>
+  <div class="grade">
+    <section class="bloco">
+      <h1>Código</h1>
+      <p id="codigo" class="codigo">····</p>
+      <div id="qr" class="qr" aria-label="QR code para abrir o app no iPhone já com este código"></div>
+      <p class="passo">No iPhone, aponte a câmera para o QR code. Ou, no app, escolha <strong>Transmitir para o OBS</strong> e digite o código.</p>
+    </section>
+    <section class="bloco">
+      <h1>No OBS (uma vez só)</h1>
+      <ol class="passos">
+        <li>Em <strong>Fontes</strong>, clique em <strong>+</strong> e escolha <strong>Navegador</strong>.</li>
+        <li>Em <strong>URL</strong>, cole este endereço:
+          <span class="endereco"><code id="endereco-obs"></code><button type="button" id="copiar">Copiar</button></span>
+        </li>
+        <li>Largura <strong>1920</strong> e altura <strong>1080</strong>. Para vídeo vertical: 1080 × 1920.</li>
+        <li>Marque <strong>Controlar áudio via OBS</strong> para o som do microfone do iPhone entrar.</li>
+      </ol>
+      <p class="passo">Quer NDI? Instale o complemento gratuito <strong>DistroAV</strong> no OBS.</p>
+    </section>
+  </div>
+  <p id="estado" class="estado" role="status">Ligando…</p>
+</main>
+
+<button type="button" id="ativar-som" class="ativar-som" hidden>Clique para ativar o som</button>
+</body>
+</html>
